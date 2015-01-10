@@ -92,13 +92,19 @@ public class RobotPlayer {
         //TODO write a check that will see if the health has changed, if so, 'fight or flight'
             //^ really gauge your location and from there broadcast the info, or do something else
         while (true) {
-            
+            System.out.println("Beaver at ");
+            System.out.println(roc.getLocation().x);
+            System.out.println(roc.getLocation().y);
             try {
-                if (roc.getSupplyLevel() == 0)
+                if (roc.getSupplyLevel() == 0 )//&& roc.isCoreReady())
                 {
-                    roc.mine();
+                    if (roc.isCoreReady())
+                           roc.mine();
+                    else {
                     roc.yield();
-                }
+                    continue;
+                    }
+                    }
                 //run a check to      
                 if (roc.isWeaponReady()) {
                     attackSomething();
@@ -240,45 +246,48 @@ public class RobotPlayer {
     {
         //convert the direction
         int x, y;
-        switch(d)
-        {
-            case NORTH:
-                x = 0;
-                y = 1;
-                break;
-            case NORTH_EAST:
-                x = 1;
-                y = 1;
-                break;
-            case EAST:
-                x = 1;
-                y = 0;
-                break;
-            case SOUTH_EAST:
-                x = 1;
-                y = -1;
-                        
-                break;
-            case SOUTH:
-                x = 0;
-                y = -1;
-                break;
-            case SOUTH_WEST:
-                x = -1;
-                y = -1;
-                break;
-            case WEST:
-                x = -1;
-                y = 0;
-                break;
-            case NORTH_WEST:
-                x = -1;
-                y = 1;
-                break;
-            default:
-                throw new GameActionException(null, "Fucked up map location");
-        }
-        return new MapLocation(m.x + x, m.y + y);
+//        switch(d)
+//        {
+//            case NORTH:
+//                x = 0;
+//                y = -1;
+//                break;
+//            case NORTH_EAST:
+//                x = -1;
+//                y = -1;
+//                break;
+//            case EAST:
+//                x = -1;
+//                y = 0;
+//                break;
+//            case SOUTH_EAST:
+//                x = -1;
+//                y = 1;
+//                        
+//                break;
+//            case SOUTH:
+//                x = 0;
+//                y = 1;
+//                break;
+//            case SOUTH_WEST:
+//                x = 1;
+//                y = 1;
+//                break;
+//            case WEST:
+//                x = 1;
+//                y = 0;
+//                break;
+//            case NORTH_WEST:
+//                x = 1;
+//                y = -1;
+//                break;
+//            default:
+//                throw new GameActionException(null, "Fucked up map location");
+//        }
+        System.out.println("new location");
+        System.out.println(m.x + d.dx);
+        System.out.println(m.y + d.dy);
+        return new MapLocation(m.x + d.dx, m.y + d.dy);
         
     }
     
