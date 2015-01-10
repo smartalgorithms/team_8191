@@ -68,6 +68,15 @@ public class RobotPlayer {
         }
         while (true) {
             try {
+                //sense nearby bots
+                RobotInfo[] bots = roc.senseNearbyRobots(15, roc.getTeam());
+                if (bots.length != 0)
+                {
+                    for (int i = 0; i < bots.length; i ++)
+                    {
+                        roc.transferSupplies(900, bots[i].location);
+                    }
+                }
                 
                 if (needSpawn(roc.getType())) {
                     if (roc.isCoreReady() && roc.getTeamOre() >= 100) //thoretically we are going to change this so that it is more deterministic
@@ -76,6 +85,7 @@ public class RobotPlayer {
                         trySpawn(directions[rand.nextInt(8)], RobotType.BEAVER);
                     }
                 }
+                
                 if (roc.isWeaponReady()) {
                     attackSomething();
                 }
@@ -92,19 +102,19 @@ public class RobotPlayer {
         //TODO write a check that will see if the health has changed, if so, 'fight or flight'
             //^ really gauge your location and from there broadcast the info, or do something else
         while (true) {
-            System.out.println("Beaver at ");
-            System.out.println(roc.getLocation().x);
-            System.out.println(roc.getLocation().y);
+//            System.out.println("Beaver at ");
+//            System.out.println(roc.getLocation().x);
+//            System.out.println(roc.getLocation().y);
             try {
-                if (roc.getSupplyLevel() == 0 )//&& roc.isCoreReady())
-                {
-                    if (roc.isCoreReady())
-                           roc.mine();
-                    else {
-                    roc.yield();
-                    continue;
-                    }
-                    }
+         //       if (roc.getSupplyLevel() == 0 )//&& roc.isCoreReady())
+            //    {
+            //        if (roc.isCoreReady())
+            //               roc.mine();
+            //        else {
+            //        roc.yield();
+           //         continue;
+            //        }
+           //         }
                 //run a check to      
                 if (roc.isWeaponReady()) {
                     attackSomething();
@@ -235,17 +245,17 @@ public class RobotPlayer {
         }
         if (offsetIndex < 8) {
             roc.spawn(directions[(dirint + offsets[offsetIndex] + 8) % 8], type);
-            if (type.equals(RobotType.BEAVER))
-                    roc.transferSupplies(900, 
-                            directionOffset(roc.senseHQLocation(),
-                                    (directions[(dirint + offsets[offsetIndex] + 8) % 8])));
+//            if (type.equals(RobotType.BEAVER))
+//                    roc.transferSupplies(900, 
+//                            directionOffset(roc.senseHQLocation(),
+//                                    (directions[(dirint + offsets[offsetIndex] + 8) % 8])));
         }
     }
 
-    static MapLocation directionOffset(MapLocation m, Direction d) throws GameActionException
-    {
+//    static MapLocation directionOffset(MapLocation m, Direction d) throws GameActionException
+//    {
         //convert the direction
-        int x, y;
+  //      int x, y;
 //        switch(d)
 //        {
 //            case NORTH:
@@ -284,13 +294,13 @@ public class RobotPlayer {
 //            default:
 //                throw new GameActionException(null, "Fucked up map location");
 //        }
-        System.out.println("new location");
-        System.out.println(m.x + d.dx);
-        System.out.println(m.y + d.dy);
-        return new MapLocation(m.x + d.dx, m.y + d.dy);
-        
-    }
-    
+//        System.out.println("new location");
+//        System.out.println(m.x + d.dx);
+//        System.out.println(m.y + d.dy);
+//        return new MapLocation(m.x + d.dx, m.y + d.dy);
+//        
+//    }
+//    
     
     static int directionToInt(Direction d) {
         switch (d) {
