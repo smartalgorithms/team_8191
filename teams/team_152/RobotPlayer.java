@@ -16,9 +16,6 @@ import java.util.*;
 public class RobotPlayer {
 
     static int spawnPos = 0;
-    static int HQFitness = 0;
-    static int BeavFitness = 0;
-    static int TowerFitness = 0;
     static RobotController roc;
     static Random rand;
     static Direction[] directions = {Direction.NORTH, Direction.NORTH_EAST, Direction.EAST, Direction.SOUTH_EAST, Direction.SOUTH,
@@ -30,21 +27,23 @@ public class RobotPlayer {
 
         switch (roc.getType()) {
             case HQ:
-                execHQ(HQFitness);
+                execHQ();
                 break;
             case BEAVER:
-                execBeav(BeavFitness);
+                execBeav();
                 break;
             case TOWER:
-                execTower(TowerFitness);
+                execTower();
                 break;
 
         }
     }
 
-    static void execHQ(int fitnessLevel) {
+    static void execHQ() {
         while (true) {
             try {
+                
+                if (needSpawn(roc.getType()))
                 if (roc.isCoreReady() && roc.getTeamOre() >= 100) //thoretically we are going to change this so that it is more deterministic
                 //as opposed to random
                 {
@@ -55,7 +54,93 @@ public class RobotPlayer {
             }
         }
     }
-        //i'd really prefer to write my own code for the robots spawning TODO
+
+    
+    static void execBeav() {
+        while (true) {
+            try {
+
+        //run a check to      
+                if (roc.isWeaponReady()) {
+                    RobotInfo[] enemies = roc.senseNearbyRobots(roc.getType().attackRadiusSquared);
+                    if (enemies.length > 0) {
+                        roc.attackLocation(enemies[0].location);
+                    }
+                }
+                if (roc.isCoreReady()) { //if robot ready, make move towards enemy HQ
+                    MapLocation m = roc.senseEnemyHQLocation();
+                    MapLocation here = roc.getLocation();
+                    tryMove(here.directionTo(m));
+                }
+            } catch (GameActionException e) {
+                continue;
+            }
+
+        }
+    }
+
+
+    static void execTower() {
+        while (true) {
+            try {
+
+                if (roc.isWeaponReady()) {
+                    RobotInfo[] enemies = roc.senseNearbyRobots(roc.getType().attackRadiusSquared);
+                    if (enemies.length > 0) {
+                        roc.attackLocation(enemies[0].location);
+                    }
+                }
+            } catch (GameActionException e) {
+                continue;
+            }
+        }
+    }
+    
+    
+    //Battlecode helper functions created by us
+    
+    
+    /**
+    * Method that allows for message interaction in order to determine 
+    * the spawning of a child robot from the parent caller
+    **/
+    static boolean needSpawn(RobotType type)
+    {
+        switch(type)
+        {
+            case
+        
+                    }
+        //TODO add an enum identifier most likely
+        //TODO write the remaining child robot calls, right now i just need it for HQ
+    }
+    
+    
+    
+    
+    
+    
+    
+    //BATTLECODE HELPER FUNCTIONS PULLED IN FROM EXAMPLE PLAYER
+    
+    
+    //write your own damn method for this
+    // This method will attempt to move in Direction d (or as close to it as possible)
+    static void tryMove(Direction d) throws GameActionException {
+        int offsetIndex = 0;
+        int[] offsets = {0, 1, -1, 2, -2};
+        int dirint = directionToInt(d);
+        boolean blocked = false;
+        while (offsetIndex < 5 && !roc.canMove(directions[(dirint + offsets[offsetIndex] + 8) % 8])) {
+            offsetIndex++;
+        }
+        if (offsetIndex < 5) {
+            roc.move(directions[(dirint + offsets[offsetIndex] + 8) % 8]);
+        }
+    }
+    
+    
+    //i'd really prefer to write my own code for the robots spawning TODO
     // This method will attempt to spawn in the given direction (or as close to it as possible)
     static void trySpawn(Direction d, RobotType type) throws GameActionException {
         int offsetIndex = 0;
@@ -69,7 +154,6 @@ public class RobotPlayer {
             roc.spawn(directions[(dirint + offsets[offsetIndex] + 8) % 8], type);
         }
     }
-
     static int directionToInt(Direction d) {
         switch (d) {
             case NORTH:
@@ -90,59 +174,6 @@ public class RobotPlayer {
                 return 7;
             default:
                 return -1;
-        }
-    }
-
-    static void execBeav(int fitnessLevel) {
-        while (true) {
-            try {
-
-        //run a check to      
-                if (roc.isWeaponReady()) {
-                    RobotInfo[] enemies = roc.senseNearbyRobots(roc.getType().attackRadiusSquared);
-                    if (enemies.length > 0) {
-                        roc.attackLocation(enemies[0].location);
-                    }
-                }
-                if (roc.isCoreReady()) {
-                    MapLocation m = roc.senseEnemyHQLocation();
-                    //MapLocation here = roc.getLocation();
-                    tryMove(roc.senseHQLocation().directionTo(m));
-                }
-            } catch (GameActionException e) {
-                continue;
-            }
-
-        }
-    }
-    //write your own damn method for this
-    // This method will attempt to move in Direction d (or as close to it as possible)
-    static void tryMove(Direction d) throws GameActionException {
-        int offsetIndex = 0;
-        int[] offsets = {0, 1, -1, 2, -2};
-        int dirint = directionToInt(d);
-        boolean blocked = false;
-        while (offsetIndex < 5 && !roc.canMove(directions[(dirint + offsets[offsetIndex] + 8) % 8])) {
-            offsetIndex++;
-        }
-        if (offsetIndex < 5) {
-            roc.move(directions[(dirint + offsets[offsetIndex] + 8) % 8]);
-        }
-    }
-
-    static void execTower(int fitnessLevel) {
-        while (true) {
-            try {
-
-                if (roc.isWeaponReady()) {
-                    RobotInfo[] enemies = roc.senseNearbyRobots(roc.getType().attackRadiusSquared);
-                    if (enemies.length > 0) {
-                        roc.attackLocation(enemies[0].location);
-                    }
-                }
-            } catch (GameActionException e) {
-                continue;
-            }
         }
     }
 
