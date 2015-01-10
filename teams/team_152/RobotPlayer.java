@@ -39,6 +39,20 @@ public class RobotPlayer {
             case TOWER:
                 execTower();
                 break;
+            case MINER:
+                execMiner();
+            case SOLDIER:
+                execSoldier();
+            case BASHER:
+                execBasher();
+            case MINERFACTORY:
+                execMinerFact();
+            case BARRACKS:
+                execBarracks();
+            case COMMANDER:
+                execCommander();
+            case TRAININGFIELD:
+                execTrainingField();
 
         }
     }
@@ -113,6 +127,37 @@ public class RobotPlayer {
         }
     }
 
+    private static void execMiner() {
+        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+    }
+
+    private static void execSoldier() {
+        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+    }
+
+    private static void execBasher() {
+        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+    }
+
+    private static void execMinerFact() {
+        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+    }
+
+    private static void execBarracks() {
+        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+    }
+
+    private static void execTrainingField() {
+        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+    }
+
+    private static void execCommander() {
+        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+    }
+    
+    
+    
+    
     //Battlecode helper functions created by us
     /**
      * Method that allows for message interaction in order to determine the
@@ -134,6 +179,10 @@ public class RobotPlayer {
         return true; //DELETE ME once cases are finished
     }
 
+    
+    
+    
+    
     //BATTLECODE HELPER FUNCTIONS PULLED IN FROM EXAMPLE PLAYER
     //write your own damn method for this
     // This method will attempt to move in Direction d (or as close to it as possible)
@@ -198,5 +247,7 @@ public class RobotPlayer {
                 return -1;
         }
     }
+
+
 
 } //end of class
