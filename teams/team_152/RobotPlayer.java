@@ -16,9 +16,6 @@ import java.util.*;
 public class RobotPlayer {
 
     static int spawnPos = 0;
-    static int HQFitness = 0;
-    static int BeavFitness = 0;
-    static int TowerFitness = 0;
     static RobotController roc;
     static Random rand;
     static Direction[] directions = {Direction.NORTH, Direction.NORTH_EAST, Direction.EAST, Direction.SOUTH_EAST, Direction.SOUTH,
@@ -30,19 +27,19 @@ public class RobotPlayer {
 
         switch (roc.getType()) {
             case HQ:
-                execHQ(HQFitness);
+                execHQ();
                 break;
             case BEAVER:
-                execBeav(BeavFitness);
+                execBeav();
                 break;
             case TOWER:
-                execTower(TowerFitness);
+                execTower();
                 break;
 
         }
     }
 
-    static void execHQ(int fitnessLevel) {
+    static void execHQ() {
         while (true) {
             try {
                 if (roc.isCoreReady() && roc.getTeamOre() >= 100) //thoretically we are going to change this so that it is more deterministic
@@ -93,7 +90,7 @@ public class RobotPlayer {
         }
     }
 
-    static void execBeav(int fitnessLevel) {
+    static void execBeav() {
         while (true) {
             try {
 
@@ -130,7 +127,7 @@ public class RobotPlayer {
         }
     }
 
-    static void execTower(int fitnessLevel) {
+    static void execTower() {
         while (true) {
             try {
 
