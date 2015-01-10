@@ -59,22 +59,31 @@ public class RobotPlayer {
 
     static void execHQ() {
         //only occurs when hq initialized
+                ArrayList<Integer> botList;
+            botList = new ArrayList<Integer>();
         try{
         roc.broadcast(42, 1);
+        
         }
         catch (GameActionException e)
         {
             
         }
+        
         while (true) {
+            
             try {
                 //sense nearby bots
                 RobotInfo[] bots = roc.senseNearbyRobots(15, roc.getTeam());
+                System.out.println(bots.length);
                 if (bots.length != 0)
                 {
                     for (int i = 0; i < bots.length; i ++)
                     {
+                        if (botList.contains(bots[i].ID))
+                            continue;    
                         roc.transferSupplies(900, bots[i].location);
+                        botList.add(bots[i].ID);
                     }
                 }
                 
