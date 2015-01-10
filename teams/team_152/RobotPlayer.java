@@ -68,7 +68,7 @@ public class RobotPlayer {
         }
         while (true) {
             try {
-
+                
                 if (needSpawn(roc.getType())) {
                     if (roc.isCoreReady() && roc.getTeamOre() >= 100) //thoretically we are going to change this so that it is more deterministic
                     //as opposed to random
@@ -89,9 +89,16 @@ public class RobotPlayer {
     }
 
     static void execBeav() {
+        //TODO write a check that will see if the health has changed, if so, 'fight or flight'
+            //^ really gauge your location and from there broadcast the info, or do something else
         while (true) {
+            
             try {
-
+                if (roc.getSupplyLevel() == 0)
+                {
+                    roc.mine();
+                    roc.yield();
+                }
                 //run a check to      
                 if (roc.isWeaponReady()) {
                     attackSomething();
@@ -201,9 +208,9 @@ public class RobotPlayer {
 
     static void attackSomething() throws GameActionException {
         RobotInfo[] enemies = roc.senseNearbyRobots(myRange, enemyTeam);
-        System.out.println(roc.getType().toString());
-        System.out.println(myRange);
-        System.out.println(enemyTeam);
+//        System.out.println(roc.getType().toString());
+//        System.out.println(myRange);
+//        System.out.println(enemyTeam);
        // System.out.println(enemies.toString());
         if (enemies.length > 0) {
             roc.attackLocation(enemies[0].location);
@@ -222,9 +229,60 @@ public class RobotPlayer {
         }
         if (offsetIndex < 8) {
             roc.spawn(directions[(dirint + offsets[offsetIndex] + 8) % 8], type);
+            if (type.equals(RobotType.BEAVER))
+                    roc.transferSupplies(900, 
+                            directionOffset(roc.senseHQLocation(),
+                                    (directions[(dirint + offsets[offsetIndex] + 8) % 8])));
         }
     }
 
+    static MapLocation directionOffset(MapLocation m, Direction d) throws GameActionException
+    {
+        //convert the direction
+        int x, y;
+        switch(d)
+        {
+            case NORTH:
+                x = 0;
+                y = 1;
+                break;
+            case NORTH_EAST:
+                x = 1;
+                y = 1;
+                break;
+            case EAST:
+                x = 1;
+                y = 0;
+                break;
+            case SOUTH_EAST:
+                x = 1;
+                y = -1;
+                        
+                break;
+            case SOUTH:
+                x = 0;
+                y = -1;
+                break;
+            case SOUTH_WEST:
+                x = -1;
+                y = -1;
+                break;
+            case WEST:
+                x = -1;
+                y = 0;
+                break;
+            case NORTH_WEST:
+                x = -1;
+                y = 1;
+                break;
+            default:
+                throw new GameActionException(null, "Fucked up map location");
+        }
+        return new MapLocation(m.x + x, m.y + y);
+        
+    }
+    
+    
     static int directionToInt(Direction d) {
         switch (d) {
             case NORTH:
