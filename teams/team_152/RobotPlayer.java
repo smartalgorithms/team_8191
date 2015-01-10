@@ -24,10 +24,11 @@ public class RobotPlayer {
         Direction.SOUTH_WEST, Direction.WEST, Direction.NORTH_WEST};
 
     public static void run(RobotController rc) {
+        
         roc = rc;
         rand = new Random(roc.getID());
         myRange = roc.getType().attackRadiusSquared;
-        enemyTeam = rc.getTeam().opponent();
+        enemyTeam = roc.getTeam().opponent();
         switch (roc.getType()) {
             case HQ:
                 execHQ();
@@ -43,6 +44,14 @@ public class RobotPlayer {
     }
 
     static void execHQ() {
+        //only occurs when hq initialized
+        try{
+        roc.broadcast(42, 1);
+        }
+        catch (GameActionException e)
+        {
+            
+        }
         while (true) {
             try {
 
@@ -71,11 +80,9 @@ public class RobotPlayer {
 
                 //run a check to      
                 if (roc.isWeaponReady()) {
-                    RobotInfo[] enemies = roc.senseNearbyRobots(roc.getType().attackRadiusSquared);
-                    if (enemies.length > 0) {
-                        roc.attackLocation(enemies[0].location);
+                    attackSomething();
                     }
-                }
+                
                 if (roc.isCoreReady()) { //if robot ready, make move towards enemy HQ
                     MapLocation m = roc.senseEnemyHQLocation();
                     MapLocation here = roc.getLocation();
@@ -145,6 +152,10 @@ public class RobotPlayer {
 
     static void attackSomething() throws GameActionException {
         RobotInfo[] enemies = roc.senseNearbyRobots(myRange, enemyTeam);
+        System.out.println(roc.getType().toString());
+        System.out.println(myRange);
+        System.out.println(enemyTeam);
+       // System.out.println(enemies.toString());
         if (enemies.length > 0) {
             roc.attackLocation(enemies[0].location);
         }
