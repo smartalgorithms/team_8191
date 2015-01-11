@@ -25,7 +25,7 @@ public class RobotPlayer {
     static int y;
     //probably clean, but i dont know the bytecode cost of instantiating after declaring
     int enemyHQDist = computeDistanceToEnemyHQ(roc.getLocation());
-    static MapLocation enemyHQLoc = roc.senseEnemyHQLocation();
+    static MapLocation enemyHQLoc;
     static Direction[] directions = {Direction.NORTH, Direction.NORTH_EAST, Direction.EAST, Direction.SOUTH_EAST, Direction.SOUTH,
         Direction.SOUTH_WEST, Direction.WEST, Direction.NORTH_WEST};
 
@@ -34,6 +34,7 @@ public class RobotPlayer {
         //get the array information containing map data
         //should probably put this below HQ
         //end map data array info
+        enemyHQLoc = roc.senseEnemyHQLocation();
         rand = new Random(roc.getID());
         myRange = roc.getType().attackRadiusSquared;
         enemyTeam = roc.getTeam().opponent();
