@@ -20,6 +20,9 @@ public class RobotPlayer {
     static Random rand;
     static int myRange;
     static Team enemyTeam;
+    static int modSize;
+    static int x;
+    static int y;
     //probably clean, but i dont know the bytecode cost of instantiating after declaring
     int enemyHQDist = computeDistanceToEnemyHQ(roc.getLocation());
     static MapLocation enemyHQLoc = roc.senseEnemyHQLocation();
@@ -72,10 +75,11 @@ public class RobotPlayer {
         try{
         roc.broadcast(42, 1);
         //determine reduced size of board
-        int x = 240 - (roc.getLocation().x - enemyHQLoc.x);
-        int y = 240 - (roc.getLocation().y - enemyHQLoc.y);
-        int modSize = x*y;
+         x = 240 - (roc.getLocation().x - enemyHQLoc.x);
+         y = 240 - (roc.getLocation().y - enemyHQLoc.y);
+        modSize = x*y;
         roc.broadcast(1, modSize);
+        initMemMap();
         }
         catch (GameActionException e)
         {
@@ -184,6 +188,30 @@ public class RobotPlayer {
         }
     }
 
+    private static void initMemMap() throws GameActionException
+    {
+        if (roc.getType() == RobotType.HQ)
+                return;
+        else
+            for(int i = 0; i < x; i++)
+            {
+                roc.broadcast(i+2, getRowHash(i));
+            }
+                        }
+    //TODO It would be cool to look at the two lengths (between these two
+    //      methods) and determine which way is faster to do
+    private static int getRowHash(int row) throws GameActionException
+    {
+        int[] data = new int[y];
+        for (int i = 0; i < y; y++)
+        {
+            //TODO TESTME --- although I believe this should work
+            data[i] = roc.readBroadcast((i + 2 + x)*(row + 1));
+            //we know the map array starts at 2
+        }
+        return Arrays.hashCode(data);
+    }
+    
     
     private static int computeDistanceToEnemyHQ(MapLocation location) {
        return location.distanceSquaredTo(roc.senseEnemyHQLocation());
