@@ -20,14 +20,14 @@ public class RobotPlayer {
     static Random rand;
     static int myRange;
     static Team enemyTeam;
-
+    //probably clean, but i dont know the bytecode cost of instantiating after declaring
+    int enemyHQDist = computeDistanceToEnemyHQ(roc.getLocation());
+    static MapLocation enemyHQLoc = roc.senseEnemyHQLocation();
     static Direction[] directions = {Direction.NORTH, Direction.NORTH_EAST, Direction.EAST, Direction.SOUTH_EAST, Direction.SOUTH,
         Direction.SOUTH_WEST, Direction.WEST, Direction.NORTH_WEST};
 
     public static void run(RobotController rc) {
         roc = rc;
-        int enemyHQDist = computeDistanceToEnemyHQ(roc.getLocation());
-        MapLocation enemyHQLoc = roc.senseEnemyHQLocation();
         //get the array information containing map data
         //should probably put this below HQ
         //end map data array info
@@ -71,7 +71,11 @@ public class RobotPlayer {
             botList = new ArrayList<Integer>();
         try{
         roc.broadcast(42, 1);
-        
+        //determine reduced size of board
+        int x = 240 - (roc.getLocation().x - enemyHQLoc.x);
+        int y = 240 - (roc.getLocation().y - enemyHQLoc.y);
+        int modSize = x*y;
+        roc.broadcast(1, modSize);
         }
         catch (GameActionException e)
         {
