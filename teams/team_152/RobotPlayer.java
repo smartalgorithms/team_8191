@@ -20,12 +20,17 @@ public class RobotPlayer {
     static Random rand;
     static int myRange;
     static Team enemyTeam;
+
     static Direction[] directions = {Direction.NORTH, Direction.NORTH_EAST, Direction.EAST, Direction.SOUTH_EAST, Direction.SOUTH,
         Direction.SOUTH_WEST, Direction.WEST, Direction.NORTH_WEST};
 
     public static void run(RobotController rc) {
-        
         roc = rc;
+        int enemyHQDist = computeDistanceToEnemyHQ(roc.getLocation());
+        MapLocation enemyHQLoc = roc.senseEnemyHQLocation();
+        //get the array information containing map data
+        //should probably put this below HQ
+        //end map data array info
         rand = new Random(roc.getID());
         myRange = roc.getType().attackRadiusSquared;
         enemyTeam = roc.getTeam().opponent();
@@ -59,15 +64,36 @@ public class RobotPlayer {
 
     static void execHQ() {
         //only occurs when hq initialized
+        //determine map information and initizliaze said components into
+        //team messaging system
+        
+        ArrayList<Integer> botList;
+            botList = new ArrayList<Integer>();
         try{
         roc.broadcast(42, 1);
+        
         }
         catch (GameActionException e)
         {
             
         }
+        
         while (true) {
+            
             try {
+                //sense nearby bots
+                RobotInfo[] bots = roc.senseNearbyRobots(15, roc.getTeam());
+                System.out.println(bots.length);
+                if (bots.length != 0)
+                {
+                    for (int i = 0; i < bots.length; i ++)
+                    {
+                        if (botList.contains(bots[i].ID))
+                            continue;    
+                        roc.transferSupplies(900, bots[i].location);
+                        botList.add(bots[i].ID);
+                    }
+                }
                 
                 if (needSpawn(roc.getType())) {
                     if (roc.isCoreReady() && roc.getTeamOre() >= 100) //thoretically we are going to change this so that it is more deterministic
@@ -76,6 +102,7 @@ public class RobotPlayer {
                         trySpawn(directions[rand.nextInt(8)], RobotType.BEAVER);
                     }
                 }
+                
                 if (roc.isWeaponReady()) {
                     attackSomething();
                 }
@@ -92,13 +119,19 @@ public class RobotPlayer {
         //TODO write a check that will see if the health has changed, if so, 'fight or flight'
             //^ really gauge your location and from there broadcast the info, or do something else
         while (true) {
-            
+//            System.out.println("Beaver at ");
+//            System.out.println(roc.getLocation().x);
+//            System.out.println(roc.getLocation().y);
             try {
-                if (roc.getSupplyLevel() == 0)
-                {
-                    roc.mine();
-                    roc.yield();
-                }
+         //       if (roc.getSupplyLevel() == 0 )//&& roc.isCoreReady())
+            //    {
+            //        if (roc.isCoreReady())
+            //               roc.mine();
+            //        else {
+            //        roc.yield();
+           //         continue;
+            //        }
+           //         }
                 //run a check to      
                 if (roc.isWeaponReady()) {
                     attackSomething();
@@ -119,6 +152,9 @@ public class RobotPlayer {
     }
 
     static void execTower() {
+        boolean surroundingsNotSensed = true;
+        boolean distNotPublished = true;
+        int count  = 0;
         while (true) {
             try {
 
@@ -126,6 +162,16 @@ public class RobotPlayer {
                     attackSomething();
                 
                 }
+                //we want to be sure to execute this during the tower's downtime
+                //  aka at the start of the game
+                if(surroundingsNotSensed)
+                {
+                    if (distNotPublished)
+                    computeDistanceToEnemyHQ(roc.getLocation());
+                    else
+                    publishSurroundings(count);
+                }
+                
             } catch (GameActionException e) {
                 System.out.println("Unexpected exception in execTower");
 				e.printStackTrace();
@@ -134,6 +180,28 @@ public class RobotPlayer {
         }
     }
 
+    
+    private static int computeDistanceToEnemyHQ(MapLocation location) {
+       return location.distanceSquaredTo(roc.senseEnemyHQLocation());
+        
+    }
+
+    private static void publishSurroundings(int count) throws GameActionException {
+        MapLocation[] info = MapLocation.getAllMapLocationsWithinRadiusSq(roc.getLocation(), 
+                roc.getType().sensorRadiusSquared);
+        for (int i = 0; i < info.length; i++)
+        {
+            //add the maplocation to the map
+            updateLocationInfo(info[i]);
+        }
+    }
+
+
+    private static void updateLocationInfo(MapLocation loc)
+    {
+        
+    }
+    
     private static void execMiner() {
         throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
     }
@@ -169,12 +237,50 @@ public class RobotPlayer {
     /**
      * Method that allows for message interaction in order to determine the
      * spawning of a child robot from the parent caller
-    *
+     * @Param RobotType is the type of building determining the spawn
+     *
      */
     static boolean needSpawn(RobotType type) throws GameActionException {
         switch (type) {
-            case HQ: {
+            case BARRACKS:
+            {
+                if (roc.readBroadcast(43) == 1) {
+                    return true;
+                } 
+                
+                else if (roc.readBroadcast(44) == 1) {
+                    return true;
+                } 
+                else {
+                    return false;
+                }
+            }
+            case MINERFACTORY:
+                 {
+                if (roc.readBroadcast(46) == 1) {
+                    return true;
+                } else {
+                    return false;
+                }
+            }
+                case HQ: {
                 if (roc.readBroadcast(42) == 1) {
+                    return true;
+                } else {
+                    return false;
+                }
+            }
+                case HELIPAD:
+                {
+                if (roc.readBroadcast(47) == 1) {
+                    return true;
+                } else {
+                    return false;
+                }
+                }
+                case TECHNOLOGYINSTITUTE:
+                    {
+                if (roc.readBroadcast(45) == 1) {
                     return true;
                 } else {
                     return false;
@@ -229,58 +335,63 @@ public class RobotPlayer {
         }
         if (offsetIndex < 8) {
             roc.spawn(directions[(dirint + offsets[offsetIndex] + 8) % 8], type);
-            if (type.equals(RobotType.BEAVER))
-                    roc.transferSupplies(900, 
-                            directionOffset(roc.senseHQLocation(),
-                                    (directions[(dirint + offsets[offsetIndex] + 8) % 8])));
+//            if (type.equals(RobotType.BEAVER))
+//                    roc.transferSupplies(900, 
+//                            directionOffset(roc.senseHQLocation(),
+//                                    (directions[(dirint + offsets[offsetIndex] + 8) % 8])));
         }
     }
 
-    static MapLocation directionOffset(MapLocation m, Direction d) throws GameActionException
-    {
+//    static MapLocation directionOffset(MapLocation m, Direction d) throws GameActionException
+//    {
         //convert the direction
-        int x, y;
-        switch(d)
-        {
-            case NORTH:
-                x = 0;
-                y = 1;
-                break;
-            case NORTH_EAST:
-                x = 1;
-                y = 1;
-                break;
-            case EAST:
-                x = 1;
-                y = 0;
-                break;
-            case SOUTH_EAST:
-                x = 1;
-                y = -1;
-                        
-                break;
-            case SOUTH:
-                x = 0;
-                y = -1;
-                break;
-            case SOUTH_WEST:
-                x = -1;
-                y = -1;
-                break;
-            case WEST:
-                x = -1;
-                y = 0;
-                break;
-            case NORTH_WEST:
-                x = -1;
-                y = 1;
-                break;
-            default:
-                throw new GameActionException(null, "Fucked up map location");
-        }
-        return new MapLocation(m.x + x, m.y + y);
-        
-    }
+  //      int x, y;
+//        switch(d)
+//        {
+//            case NORTH:
+//                x = 0;
+//                y = -1;
+//                break;
+//            case NORTH_EAST:
+//                x = -1;
+//                y = -1;
+//                break;
+//            case EAST:
+//                x = -1;
+//                y = 0;
+//                break;
+//            case SOUTH_EAST:
+//                x = -1;
+//                y = 1;
+//                        
+//                break;
+//            case SOUTH:
+//                x = 0;
+//                y = 1;
+//                break;
+//            case SOUTH_WEST:
+//                x = 1;
+//                y = 1;
+//                break;
+//            case WEST:
+//                x = 1;
+//                y = 0;
+//                break;
+//            case NORTH_WEST:
+//                x = 1;
+//                y = -1;
+//                break;
+//            default:
+//                throw new GameActionException(null, "Fucked up map location");
+//        }
+//        System.out.println("new location");
+//        System.out.println(m.x + d.dx);
+//        System.out.println(m.y + d.dy);
+//        return new MapLocation(m.x + d.dx, m.y + d.dy);
+//        
+//    }
+//    
+    
     
     
     static int directionToInt(Direction d) {
@@ -305,7 +416,6 @@ public class RobotPlayer {
                 return -1;
         }
     }
-
 
 
 } //end of class
