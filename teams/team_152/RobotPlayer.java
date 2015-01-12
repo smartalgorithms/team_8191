@@ -13,6 +13,8 @@ import java.util.*;
  * @author byrdie
  * @author albmin
  */
+
+//TODO: ADD HASHCODE BUCKETS FOR ALL THE TOWERS LOCATIONS
 public class RobotPlayer {
 
     static int spawnPos = 0;
