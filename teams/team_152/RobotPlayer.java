@@ -448,6 +448,23 @@ public class RobotPlayer {
         //else broadcast nothing, and everyone will just simply assume that there is nothing in the way at that location
 
     }
+    
+    private static int  readLocationInfo(MapLocation loc) throws GameActionException
+    {
+        boolean isNegative = false;
+            int abslochashCode = loc.hashCode();
+            if (abslochashCode < 0) {
+                abslochashCode = Math.abs(abslochashCode);
+                isNegative = true;
+            }
+            int memLocation = abslochashCode % (modSize / 2);
+            if (!isNegative) {
+                memLocation = memLocation + (modSize / 2);
+            }
+            return roc.readBroadcast(memLocation);
+            
+    }
+    
 
     private static void ordertTowerPQ() throws GameActionException {
         double[] queue = new double[6];
@@ -685,10 +702,6 @@ public class RobotPlayer {
         }
         if (offsetIndex < 8) {
             roc.spawn(directions[(dirint + offsets[offsetIndex] + 8) % 8], type);
-//            if (type.equals(RobotType.BEAVER))
-//                    roc.transferSupplies(900,
-//                            directionOffset(roc.senseHQLocation(),
-//                                    (directions[(dirint + offsets[offsetIndex] + 8) % 8])));
         }
     }
 
@@ -697,7 +710,6 @@ public class RobotPlayer {
         int offsetIndex = 0;
         int[] offsets = {0, 1, -1, 2, -2, 3, -3, 4};
         int dirint = directionToInt(d);
-        boolean blocked = false;
         while (offsetIndex < 8 && !roc.canMove(directions[(dirint + offsets[offsetIndex] + 8) % 8])) {
             offsetIndex++;
         }
