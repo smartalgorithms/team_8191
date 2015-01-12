@@ -272,7 +272,6 @@ public class RobotPlayer {
         }
         boolean surroundingsNotSensed = true;
         boolean distNotPublished = true;
-        int count = 0;
         while (true) {
             try {
                 if (roc.isWeaponReady()) {
@@ -290,12 +289,12 @@ public class RobotPlayer {
                         while (roc.readBroadcast(xx) != 0) {
                             xx += 1;
                         }
-                        roc.broadcast(xx, roc.getLocation().hashCode());
+                        roc.broadcast(xx + 12, roc.getLocation().hashCode());
                         roc.broadcast(xx, yy);
                         distNotPublished = false;
                     } else {
                         int avgCoreLevel = publishSurroundings();
-                        roc.broadcast(xx + 12, avgCoreLevel);
+                        roc.broadcast(xx + 6, avgCoreLevel);
                         surroundingsNotSensed = false;
                     }
                     if (roc.isWeaponReady()) {
@@ -304,8 +303,7 @@ public class RobotPlayer {
                 }
             } catch (GameActionException e) {
                 System.out.println("Unexpected exception in execTower");
-                e.printStackTrace();
-                continue;
+                e.printStackTrace();           
             }
         }
     }
@@ -334,6 +332,13 @@ public class RobotPlayer {
 
     }
 
+    /**
+     * Method that will publish the individual surroundings of each location
+     * within the sensing radius of the RobotController calling this function
+     * @return average core value of the surroundings (for use with towers during
+     * start of game)
+     * @throws GameActionException 
+     */
     private static int publishSurroundings() throws GameActionException {
         MapLocation[] info = MapLocation.getAllMapLocationsWithinRadiusSq(roc.getLocation(),
                 roc.getType().sensorRadiusSquared);
@@ -351,7 +356,6 @@ public class RobotPlayer {
     }
 
     private static int updateLocationInfo(MapLocation loc) {
-
         try {
             boolean isNegative = false;
             int abslochashCode = loc.hashCode();
