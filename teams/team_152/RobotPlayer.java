@@ -20,13 +20,11 @@ public class RobotPlayer {
     static Random rand;
     static int myRange;
     static Team enemyTeam;
-
     static int flockOffset = 50;
-
     /*memory map*/
     //(x,y) for flocks 1 - 10
     static final int[][] currWayBuckets = {{60050, 60051}, {60052, 60053}, {60054, 60055}, {60056, 60057}, {60058, 60059}, {60060, 60061}, {60062, 60063}, {60064, 60065}, {60066, 60067}, {60068, 60069}};
-    // bucket containing flock number for various units   
+    // bucket containing flock number for various units
     static final int beavFlockNum = 60070;
     static final int minerFlockNum = 60071;
     static final int soldierFlockNum = 60072;
@@ -37,14 +35,10 @@ public class RobotPlayer {
     static final int launcerFlockNum = 60077;
     // building request fields
     static final int[] barracksReq = {60080, 60081, 60082}; //{x, y, requested?(1,0)}
-
     /*action booleans*/
     static boolean buildReq = false;    //set to true for contruct building request
     static int buildingType = 0;    // 0=none, 1=supply depot, 2=minerfactory, 3=techinstitute, 4=barracks, 5=helipad, 6=trainingfield, 7=tankfactory, 8=aerospacelab, 9=handwash
-
     static int[] waypoint = new int[2];    // current waypoint of the robot
-
-
     static int modSize;
     static int x;
     static int y;
@@ -54,7 +48,6 @@ public class RobotPlayer {
     static MapLocation enemyHQLoc;
     static Direction[] directions = {Direction.NORTH, Direction.NORTH_EAST, Direction.EAST, Direction.SOUTH_EAST, Direction.SOUTH,
         Direction.SOUTH_WEST, Direction.WEST, Direction.NORTH_WEST};
-
     static boolean firstMove = true;
     static int flockNumber;
 
@@ -63,10 +56,8 @@ public class RobotPlayer {
         //get the array information containing map data
         //should probably put this below HQ
         //end map data array info
-
         enemyHQLoc = roc.senseEnemyHQLocation();
         RobotType type = roc.getType();
-
         rand = new Random(roc.getID());
         myRange = type.attackRadiusSquared;
         enemyTeam = roc.getTeam().opponent();
@@ -94,7 +85,6 @@ public class RobotPlayer {
                 execCommander();
             case TRAININGFIELD:
                 execTrainingField();
-
         }
     }
 
@@ -102,23 +92,19 @@ public class RobotPlayer {
         //only occurs when hq initialized
         //determine map information and initizliaze said components into
         //team messaging system
-
         ArrayList<Integer> botList;
         botList = new ArrayList<Integer>();
         try {
-
             if (firstMove) {
                 firstMove = false;
-
-roc.broadcast(58000, 1);
+                roc.broadcast(58000, 1);
                 //determine reduced size of board
                 int x = 240 - (roc.getLocation().x - enemyHQLoc.x);
                 int y = 240 - (roc.getLocation().y - enemyHQLoc.y);
                 int modSize = x * y;
                 roc.broadcast(1, modSize);
-                          roc.broadcast(65534, x);
-            roc.broadcast(65535, y);
-
+                roc.broadcast(65534, x);
+                roc.broadcast(65535, y);
                 //broadcast the first waypoint for flock 1
                 int wayX = (enemyHQLoc.x - roc.getLocation().x) / 2 + roc.getLocation().x;
                 int wayY = (enemyHQLoc.y - roc.getLocation().y) / 2 + roc.getLocation().y;
@@ -126,7 +112,6 @@ roc.broadcast(58000, 1);
                 roc.broadcast(flockOffset + 0, wayX);
                 roc.broadcast(flockOffset + 1, wayY);
                 roc.broadcast(71, 0);
-                
                 //request barracks
                 roc.broadcast(barracksReq[0], ((enemyHQLoc.x - roc.getLocation().x) / 6 + roc.getLocation().x));
                 roc.broadcast(barracksReq[1], ((enemyHQLoc.y - roc.getLocation().y) / 6 + roc.getLocation().y));
@@ -139,8 +124,10 @@ roc.broadcast(58000, 1);
         }
 
         while (true) {
-
             try {
+                if (Clock.getRoundNum() == 13) {
+                    ordertTowerPQ();
+                }
                 //sense nearby bots
                 RobotInfo[] bots = roc.senseNearbyRobots(15, roc.getTeam());
                 if (bots.length != 0) {
@@ -152,7 +139,6 @@ roc.broadcast(58000, 1);
                         botList.add(bots[i].ID);
                     }
                 }
-
                 if (needSpawn(roc.getType())) {
                     if (roc.isCoreReady() && roc.getTeamOre() >= 100) //thoretically we are going to change this so that it is more deterministic
                     //as opposed to random
@@ -160,11 +146,9 @@ roc.broadcast(58000, 1);
                         trySpawn(directions[rand.nextInt(8)], RobotType.BEAVER);
                     }
                 }
-
                 if (roc.isWeaponReady()) {
                     attackSomething();
                 }
-
                 if (Clock.getRoundNum() == 1000) {
                     int wayX = (enemyHQLoc.x - roc.getLocation().x) / 4 + roc.getLocation().x;
                     int wayY = (enemyHQLoc.y - roc.getLocation().y) / 4 + roc.getLocation().y;
@@ -172,7 +156,6 @@ roc.broadcast(58000, 1);
                     roc.broadcast(flockOffset + 0, wayX);
                     roc.broadcast(flockOffset + 1, wayY);
                 }
-
             } catch (GameActionException e) {
                 System.out.println("Unexpected exception in execHQ");
                 e.printStackTrace();
@@ -198,28 +181,27 @@ roc.broadcast(58000, 1);
                     waypoint[1] = roc.readBroadcast(barracksReq[1]);
 
                     System.out.println("Build barracks at" + waypoint[0] + ", " + waypoint[1]);
-                    
+
                     buildReq = true;
                     buildingType = 4;
 
                 }
 
             } catch (Exception e) {
-
+                System.out.println("Unexpected exception in execBeav pre-init");
+                e.printStackTrace();
             }
 
         }
 
         //TODO write a check that will see if the health has changed, if so, 'fight or flight'
         //^ really gauge your location and from there broadcast the info, or do something else
-
         try {
-        modSize = roc.readBroadcast(1);
+            modSize = roc.readBroadcast(1);
+        } catch (GameActionException e) {
+            System.out.println("Unexpected exception in execBeav");
+            e.printStackTrace();
         }
-        catch (GameActionException e) {
-                System.out.println("Unexpected exception in execBeav");
-                e.printStackTrace();
-            }
 
         while (true) {
 //            System.out.println("Beaver at ");
@@ -236,7 +218,6 @@ roc.broadcast(58000, 1);
                 //         continue;
                 //        }
                 //         }
-
                 if (roc.getSupplyLevel() == 0 && roc.isCoreReady()) {
                     if (roc.isCoreReady()) {
                         roc.mine();
@@ -246,7 +227,7 @@ roc.broadcast(58000, 1);
                     }
                 }
 
-                //run a check to      
+                //run a check to
                 if (roc.isWeaponReady()) {
                     attackSomething();
                 }
@@ -281,41 +262,44 @@ roc.broadcast(58000, 1);
     }
 
     static void execTower() {
-                try {
-        modSize = roc.readBroadcast(1);
+        try {
+            modSize = roc.readBroadcast(1);
+        } catch (GameActionException e) {
+            System.out.println("Unexpected exception in execBeav");
+            e.printStackTrace();
         }
-        catch (GameActionException e) {
-                System.out.println("Unexpected exception in execBeav");
-                e.printStackTrace();
-            }
         boolean surroundingsNotSensed = true;
         boolean distNotPublished = true;
         int count = 0;
         while (true) {
             try {
-
                 if (roc.isWeaponReady()) {
                     attackSomething();
-
                 }
                 //we want to be sure to execute this during the tower's downtime
                 //  aka at the start of the game
-
-
                 //this should execute at the start of the game regardless
                 if (surroundingsNotSensed) {
-                   // System.out.println("Code arrived here");
+                    // System.out.println("Code arrived here");
+                    int xx = 0;
                     if (distNotPublished) {
-                        computeDistanceToEnemyHQ(roc.getLocation());
-                        roc.broadcast(65000, roc.getLocation().hashCode());
+                        int yy = computeDistanceToEnemyHQ(roc.getLocation());
+                        xx = 65000;
+                        while (roc.readBroadcast(xx) != 0) {
+                            xx += 1;
+                        }
+                        roc.broadcast(xx, roc.getLocation().hashCode());
+                        roc.broadcast(xx, yy);
                         distNotPublished = false;
                     } else {
-                        publishSurroundings(count);
+                        int avgCoreLevel = publishSurroundings();
+                        roc.broadcast(xx + 12, avgCoreLevel);
                         surroundingsNotSensed = false;
-
+                    }
+                    if (roc.isWeaponReady()) {
+                        attackSomething();
                     }
                 }
-
             } catch (GameActionException e) {
                 System.out.println("Unexpected exception in execTower");
                 e.printStackTrace();
@@ -324,19 +308,15 @@ roc.broadcast(58000, 1);
         }
     }
 
-
     private static int computeDistanceToEnemyHQ(MapLocation location) {
         return location.distanceSquaredTo(roc.senseEnemyHQLocation());
     }
 
-
-    
     private static void initMemMap() throws GameActionException {
-            for (int i = 0; i < x; i++) {
-                roc.broadcast(i + 2, getRowHash(i));
-            }
+        for (int i = 0; i < x; i++) {
+            roc.broadcast(i + 2, getRowHash(i));
         }
-    
+    }
 
     //TODO It would be cool to look at the two lengths (between these two
     //      methods) and determine which way is faster to do
@@ -352,56 +332,94 @@ roc.broadcast(58000, 1);
 
     }
 
-
-    
-    private static void publishSurroundings(int count) throws GameActionException {
+    private static int publishSurroundings() throws GameActionException {
         MapLocation[] info = MapLocation.getAllMapLocationsWithinRadiusSq(roc.getLocation(),
                 roc.getType().sensorRadiusSquared);
+        int avg = 0;
         for (int i = 0; i < info.length; i++) {
             //add the maplocation to the map
-            updateLocationInfo(info[i]);
+
+            avg += updateLocationInfo(info[i]);
+            //if we can attack, might as well do so
+            if (roc.isWeaponReady()) {
+                attackSomething();
+            }
         }
+        return avg / info.length;
     }
 
-    private static void updateLocationInfo(MapLocation loc) {
+    private static int updateLocationInfo(MapLocation loc) {
 
-        try{
-       // System.out.println("detecting location info");
-       // System.out.println(modSize);
+        try {
             boolean isNegative = false;
             int abslochashCode = loc.hashCode();
-            if (abslochashCode < 0)
-            {
+            if (abslochashCode < 0) {
                 abslochashCode = Math.abs(abslochashCode);
                 isNegative = true;
             }
-            
-            int memLocation = abslochashCode % (modSize/2);
-            if (!isNegative)
-              memLocation = memLocation + (modSize/2);
-        if (roc.senseOre(loc) > 10) {
-           // System.out.println( loc.hashCode());
-            if (isNegative)
-            roc.broadcast(memLocation, 1);
-            
-        } else if (roc.senseOre(loc) > 20) {
-           // System.out.println( loc.hashCode());
-            roc.broadcast(memLocation, 2);
-            
-        } else if (roc.senseTerrainTile(loc) != TerrainTile.NORMAL) {
-          //  System.out.println( loc.hashCode());
-            roc.broadcast(memLocation, 0);
-            
-        }
-        }
-        
-        catch (GameActionException g)
-        {
+
+            int memLocation = abslochashCode % (modSize / 2);
+            if (!isNegative) {
+                memLocation = memLocation + (modSize / 2);
+            }
+            if (roc.senseOre(loc) > 10) {
+                roc.broadcast(memLocation, 1);
+                return 1;
+            } else if (roc.senseOre(loc) > 20) {
+                roc.broadcast(memLocation, 2);
+                return 2;
+            } else if (roc.senseTerrainTile(loc) != TerrainTile.NORMAL) {
+                roc.broadcast(memLocation, 0);
+                return 0;
+            }
+            return 0; // no significant ore to be found
+        } catch (GameActionException g) {
             System.out.println("Exception caught in updatelocationinfo");
             g.printStackTrace();
+            return 0;  //just so compiler stops griping
         }
         //else broadcast nothing, and everyone will just simply assume that there is nothing in the way at that location
 
+    }
+
+    private static void ordertTowerPQ() throws GameActionException {
+        double[] queue = new double[6];
+        int[] queue2 = new int[6];
+        for (int i = 0; i < 6; i++) {
+            int temp = roc.readBroadcast(65000 + i);
+            if (temp == 0) {
+                break; // we've gotten the data that we needed
+            } else {
+                int temp2 = roc.readBroadcast(65006 + i);
+                int temp3 = roc.readBroadcast(65012 + i);
+                double weight = temp - (1.4 * temp2);
+                if (i == 0) {
+                    queue[i] = weight;
+                    queue2[i] = temp3;
+                } else {
+                    boolean weightAdded = false;
+                    for (int g = 0; g < i; g++) {
+                        if (weight < queue[g]) {
+                            //make room for the array in its proper location
+                            for (int j = 0; j < i; j++) {
+                                queue[i - j] = queue[i - j - 1];
+                                queue2[i - j] = queue2[i - j - 1];
+
+                            }
+                            queue[g] = weight; // finally, add the damn less than variable to the array
+                            queue2[g] = temp3;
+                            weightAdded = true;
+                            break;
+                        }
+
+                    }
+                    if (!weightAdded) {
+                        queue[i] = weight;
+                        queue2[i] = temp3;
+                    }
+                }
+            }
+        }
     }
 
     private static void execMiner() {
@@ -531,7 +549,7 @@ roc.broadcast(58000, 1);
         if (offsetIndex < 8) {
             roc.spawn(directions[(dirint + offsets[offsetIndex] + 8) % 8], type);
 //            if (type.equals(RobotType.BEAVER))
-//                    roc.transferSupplies(900, 
+//                    roc.transferSupplies(900,
 //                            directionOffset(roc.senseHQLocation(),
 //                                    (directions[(dirint + offsets[offsetIndex] + 8) % 8])));
         }
@@ -550,7 +568,6 @@ roc.broadcast(58000, 1);
             roc.build(directions[(dirint + offsets[offsetIndex] + 8) % 8], type);
         }
     }
-
 
 //    static MapLocation directionOffset(MapLocation m, Direction d) throws GameActionException
 //    {
@@ -573,7 +590,7 @@ roc.broadcast(58000, 1);
 //            case SOUTH_EAST:
 //                x = -1;
 //                y = 1;
-//                        
+//
 //                break;
 //            case SOUTH:
 //                x = 0;
@@ -598,9 +615,9 @@ roc.broadcast(58000, 1);
 //        System.out.println(m.x + d.dx);
 //        System.out.println(m.y + d.dy);
 //        return new MapLocation(m.x + d.dx, m.y + d.dy);
-//        
+//
 //    }
-//    
+//
     static void takeNextMove(int[] waypoint) {
 
         Direction next = Flock.computeMove(roc, waypoint);
