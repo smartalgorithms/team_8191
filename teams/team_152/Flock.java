@@ -16,9 +16,9 @@ public class Flock {
 
     public static final int flocksize = 25;
 
-    public static final double alSepWeight = 1.5;
-    public static final double alCohWeight = 2.0;
-    public static final double axAttractWeight = 3.0;
+    public static final double alSepWeight = 1.7;
+    public static final double alCohWeight = 2.1;
+    public static final double axAttractWeight = 2.0;
     public static final double wayAttractWeight = 1.0;
 
     /* array of compass rose tangents*/
@@ -53,12 +53,27 @@ public class Flock {
         wayAttract[1] = wayAttractWeight * wayAttract[1];
 
         /* calculate total acceleration from all terms */
+//        accel[0] = alliedCoh[0] + enemyAttract[0] + wayAttract[0];
+//        accel[1] = alliedCoh[1] + enemyAttract[1] + wayAttract[1];
         accel[0] = alliedSep[0] + alliedCoh[0] + enemyAttract[0] + wayAttract[0];
         accel[1] = alliedSep[1] + alliedCoh[1] + enemyAttract[1] + wayAttract[1];
 //        accel[0] = wayAttract[0];
 //        accel[1] = wayAttract[1];
 //        System.out.println(accel[0] + ", " + accel[1]);
 
+        return vectorToDirection(accel);
+        
+    }
+    
+    public static Direction computeWaypointMove(RobotController rc, int[] waypoint){
+        double[] accel = new double[2];
+        
+        double[] wayAttract = waypointAttraction(rc, waypoint);    //Waypoint attraction
+        
+        return vectorToDirection(wayAttract);
+    }
+    
+    public static Direction vectorToDirection(double[] accel){
         /*Check if we should move at all in any cardinal direction*/
         if (accel[0] == 0.0) {  // x component is zero
             if (accel[1] > 0.0) { //y component is positive
@@ -101,16 +116,6 @@ public class Flock {
                     return EAST;
                 }
             }
-
-//            if (roseTan[0] > ratio) {
-//                return WEST;
-//            } else if (roseTan[0] < ratio && ratio < roseTan[1]) {
-//                return NORTH_WEST;
-//            } else if (roseTan[1] < ratio && ratio < roseTan[2]) {
-//                return NORTH;
-//            } else {
-//                return NORTH_EAST;
-//            }
         } else {    //y is positive
             if (accel[0] > 0.0) {   // x is positive
                 if (ratio < roseTan[0]) {
@@ -130,16 +135,6 @@ public class Flock {
                 }
 
             }
-
-//            if (roseTan[0] > ratio) {
-//                return EAST;
-//            } else if (roseTan[0] < ratio && ratio < roseTan[1]) {
-//                return SOUTH_EAST;
-//            } else if (roseTan[1] < ratio && ratio < roseTan[2]) {
-//                return SOUTH;
-//            } else {
-//                return SOUTH_WEST;
-//            }
         }
     }
 
@@ -148,7 +143,7 @@ public class Flock {
 
         double[] aveDirVect = {0.0, 0.0};
 
-        int desiredSep = 2;
+        int desiredSep = 1;
 
         try {
             /*loop through all the bots and find average direction vector*/
@@ -188,7 +183,7 @@ public class Flock {
     public static double[] alliedCohesion(RobotController rc, RobotInfo[] nearbyAllies) {
         double[] aveDirVect = {0.0, 0.0};
 
-        int desiredSep = 3;
+        int desiredSep = 2;
 
         try {
             /*loop through all the bots and find average direction vector*/
@@ -270,7 +265,7 @@ public class Flock {
     public static double[] waypointAttraction(RobotController rc, int[] waypoint) {
         double[] aveDirVect = {0.0, 0.0};
 
-        int desiredSep = 1;
+        int desiredSep = 0;
 
         try {
             /*loop through all the bots and find average direction vector*/

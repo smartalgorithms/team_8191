@@ -21,9 +21,16 @@ public class RobotPlayer {
     static int myRange;
     static Team enemyTeam;
 
-    static int flockOffset = 50;
+    static int numBeavers = 0;  //for HQ to keep track of beavers
+    static int mineFarmNumX = -10;    //for keeping track of mining squares
+    static int mineFarmNumY = -10;
+
+//    static int flockOffset = 50;
 
     /*memory map*/
+    static final int numBeaversBucket = 58000;
+    static final int numSoldiersBucket = 58001;
+
     //(x,y) for flocks 1 - 10
     static final int[][] currWayBuckets = {{60050, 60051}, {60052, 60053}, {60054, 60055}, {60056, 60057}, {60058, 60059}, {60060, 60061}, {60062, 60063}, {60064, 60065}, {60066, 60067}, {60068, 60069}};
     // bucket containing flock number for various units   
@@ -34,16 +41,17 @@ public class RobotPlayer {
     static final int droneFlockNum = 60074;
     static final int tankFlockNum = 60075;
     static final int commanderFlockNum = 60076;
-    static final int launcerFlockNum = 60077;
+    static final int launcherFlockNum = 60077;
     // building request fields
     static final int[] barracksReq = {60080, 60081, 60082}; //{x, y, requested?(1,0)}
+    static final int[] tankFactReq = {60083, 60084, 60085}; //{x, y, requested?(1,0)}
 
     /*action booleans*/
     static boolean buildReq = false;    //set to true for contruct building request
+    static boolean mineReq = false; //set to true to tell robot to mine
     static int buildingType = 0;    // 0=none, 1=supply depot, 2=minerfactory, 3=techinstitute, 4=barracks, 5=helipad, 6=trainingfield, 7=tankfactory, 8=aerospacelab, 9=handwash
 
     static int[] waypoint = new int[2];    // current waypoint of the robot
-
 
     static int modSize;
     static int x;
@@ -90,10 +98,14 @@ public class RobotPlayer {
                 execMinerFact();
             case BARRACKS:
                 execBarracks();
+                break;
             case COMMANDER:
                 execCommander();
             case TRAININGFIELD:
                 execTrainingField();
+            case TANKFACTORY:
+                execTankFact();
+                break;
 
         }
     }
@@ -110,26 +122,26 @@ public class RobotPlayer {
             if (firstMove) {
                 firstMove = false;
 
-roc.broadcast(58000, 1);
+                roc.broadcast(58000, 1);
                 //determine reduced size of board
                 int x = 240 - (roc.getLocation().x - enemyHQLoc.x);
                 int y = 240 - (roc.getLocation().y - enemyHQLoc.y);
                 int modSize = x * y;
                 roc.broadcast(1, modSize);
-                          roc.broadcast(65534, x);
-            roc.broadcast(65535, y);
+                roc.broadcast(65534, x);
+                roc.broadcast(65535, y);
 
                 //broadcast the first waypoint for flock 1
-                int wayX = (enemyHQLoc.x - roc.getLocation().x) / 2 + roc.getLocation().x;
-                int wayY = (enemyHQLoc.y - roc.getLocation().y) / 2 + roc.getLocation().y;
+                int wayX = (enemyHQLoc.x - roc.getLocation().x) / 3 + roc.getLocation().x;
+                int wayY = roc.getLocation().y;
                 System.out.println(wayX + ", " + wayY);
-                roc.broadcast(flockOffset + 0, wayX);
-                roc.broadcast(flockOffset + 1, wayY);
-                roc.broadcast(71, 0);
-                
+                roc.broadcast(currWayBuckets[0][0], wayX);
+                roc.broadcast(currWayBuckets[0][1], wayY);
+                roc.broadcast(beavFlockNum, 0);
+
                 //request barracks
-                roc.broadcast(barracksReq[0], ((enemyHQLoc.x - roc.getLocation().x) / 6 + roc.getLocation().x));
-                roc.broadcast(barracksReq[1], ((enemyHQLoc.y - roc.getLocation().y) / 6 + roc.getLocation().y));
+                roc.broadcast(barracksReq[0], ((enemyHQLoc.x - roc.getLocation().x) / 4 + roc.getLocation().x));
+                roc.broadcast(barracksReq[1], ((enemyHQLoc.y - roc.getLocation().y) / 4 + roc.getLocation().y));
                 roc.broadcast(barracksReq[2], 1);
             }
 
@@ -158,6 +170,8 @@ roc.broadcast(58000, 1);
                     //as opposed to random
                     {
                         trySpawn(directions[rand.nextInt(8)], RobotType.BEAVER);
+                        numBeavers++;
+                        roc.broadcast(numBeaversBucket, numBeavers);
                     }
                 }
 
@@ -169,8 +183,8 @@ roc.broadcast(58000, 1);
                     int wayX = (enemyHQLoc.x - roc.getLocation().x) / 4 + roc.getLocation().x;
                     int wayY = (enemyHQLoc.y - roc.getLocation().y) / 4 + roc.getLocation().y;
                     System.out.println(wayX + ", " + wayY);
-                    roc.broadcast(flockOffset + 0, wayX);
-                    roc.broadcast(flockOffset + 1, wayY);
+                    roc.broadcast(currWayBuckets[0][0], wayX);
+                    roc.broadcast(currWayBuckets[0][1], wayY);
                 }
 
             } catch (GameActionException e) {
@@ -189,7 +203,7 @@ roc.broadcast(58000, 1);
                 flockNumber = roc.readBroadcast(beavFlockNum);
 
                 /*loop here to see if there is anything requested for build*/
-                if (roc.readBroadcast(barracksReq[2]) == 1) {
+                if (roc.readBroadcast(barracksReq[2]) == 1) {   //build barracks?
 
                     roc.broadcast(barracksReq[2], 0);   //acknowledge request to build
 
@@ -198,9 +212,22 @@ roc.broadcast(58000, 1);
                     waypoint[1] = roc.readBroadcast(barracksReq[1]);
 
                     System.out.println("Build barracks at" + waypoint[0] + ", " + waypoint[1]);
-                    
+
                     buildReq = true;
                     buildingType = 4;
+
+                } else if (roc.readBroadcast(tankFactReq[2]) == 1) {
+
+                    roc.broadcast(tankFactReq[2], 0);   //build tank factory?
+
+                    /*if so, go to specified location and build one at specified location*/
+                    waypoint[0] = roc.readBroadcast(tankFactReq[0]);
+                    waypoint[1] = roc.readBroadcast(tankFactReq[1]);
+
+                    System.out.println("Build barracks at" + waypoint[0] + ", " + waypoint[1]);
+
+                    buildReq = true;
+                    buildingType = 7;
 
                 }
 
@@ -212,39 +239,23 @@ roc.broadcast(58000, 1);
 
         //TODO write a check that will see if the health has changed, if so, 'fight or flight'
         //^ really gauge your location and from there broadcast the info, or do something else
-
         try {
-        modSize = roc.readBroadcast(1);
+            modSize = roc.readBroadcast(1);
+        } catch (GameActionException e) {
+            System.out.println("Unexpected exception in execBeav");
+            e.printStackTrace();
         }
-        catch (GameActionException e) {
-                System.out.println("Unexpected exception in execBeav");
-                e.printStackTrace();
-            }
 
         while (true) {
-//            System.out.println("Beaver at ");
-//            System.out.println(roc.getLocation().x);
-//            System.out.println(roc.getLocation().y);
             try {
-
-                //       if (roc.getSupplyLevel() == 0 )//&& roc.isCoreReady())
-                //    {
-                //        if (roc.isCoreReady())
-                //               roc.mine();
-                //        else {
-                //        roc.yield();
-                //         continue;
-                //        }
-                //         }
-
-                if (roc.getSupplyLevel() == 0 && roc.isCoreReady()) {
-                    if (roc.isCoreReady()) {
-                        roc.mine();
-                    } else {
-                        roc.yield();
-                        continue;
-                    }
-                }
+//                if (roc.getSupplyLevel() == 0 && roc.isCoreReady()) {
+//                    if (roc.isCoreReady()) {
+//                        roc.mine();
+//                    } else {
+//                        roc.yield();
+//                        continue;
+//                    }
+//                }
 
                 //run a check to      
                 if (roc.isWeaponReady()) {
@@ -252,25 +263,63 @@ roc.broadcast(58000, 1);
                 }
 
                 if (roc.isCoreReady()) { //if robot ready, make move towards enemy HQ
-//                    MapLocation m = roc.senseEnemyHQLocation();
-//                    MapLocation here = roc.getLocation();
-//                    tryMove(here.directionTo(m));
+
 
                     /*find updated waypoint from shared array*/
-                    if (!buildReq) {        // get next waypoint if we're not building
-                        waypoint[0] = roc.readBroadcast(flockOffset + flockNumber + 0);
-                        waypoint[1] = roc.readBroadcast(flockOffset + flockNumber + 1);
-                    } else {    //otherwise see if we've reached current waypoint
+                    if (!buildReq && !mineReq) {        // get next waypoint if we're not building
+
                         if (waypoint[0] == roc.getLocation().x && waypoint[1] == roc.getLocation().y) {   //we've arrived at location of waypoint
-                            tryBuild(Direction.NORTH, RobotType.BARRACKS);  //this should be a case statement for all building types
-                            buildReq = false;   // ackowledge local building request
+
+                            /*assign place to mine*/
+                            mineReq = true;
+                            waypoint[0] = waypoint[0] + mineFarmNumX;
+                            waypoint[1] = waypoint[1] + mineFarmNumY;
+                            if (mineFarmNumX != 0) {
+                                mineFarmNumX++;
+                            } else {
+                                mineFarmNumY++;
+                                mineFarmNumX = -10;
+                            }
+
+                            System.out.println("Mining location is" + waypoint[0] + ", " + waypoint[1]);
+
+                        } else {
+                            waypoint[0] = roc.readBroadcast(currWayBuckets[flockNumber][0]);
+                            waypoint[1] = roc.readBroadcast(currWayBuckets[flockNumber][1]);
                         }
 
+                        takeWaypointMove(waypoint);
+
+                    } else if (buildReq) {  //see if we're supposed to build
+                        if (waypoint[0] == roc.getLocation().x && waypoint[1] == roc.getLocation().y) {   //we've arrived at location of waypoint
+
+                            switch (buildingType) {
+                                case 4:
+                                    tryBuild(Direction.NORTH, RobotType.BARRACKS);  //this should be a case statement for all building types
+                                    buildReq = false;   // ackowledge local building request
+                                    break;
+                                case 7:
+                                   tryBuild(Direction.NORTH, RobotType.TANKFACTORY);  //this should be a case statement for all building types
+                                    buildReq = false;   // ackowledge local building request
+                                    break; 
+                            }
+
+                        }
+                        takeWaypointMove(waypoint);
+                    } else if (mineReq) {
+                        if (waypoint[0] == roc.getLocation().x && waypoint[1] == roc.getLocation().y) {   //we've arrived at location of waypoint
+                            if (roc.canMine()) {
+                                roc.mine();
+                            } else {
+                                waypoint[0]++;
+                                waypoint[1]++;
+                            }
+                        }
                     }
-
-                    takeNextMove(waypoint);
-
+                } else {
+                    roc.yield();
                 }
+
             } catch (GameActionException e) {
                 System.out.println("Unexpected exception in execBeav");
                 e.printStackTrace();
@@ -281,13 +330,12 @@ roc.broadcast(58000, 1);
     }
 
     static void execTower() {
-                try {
-        modSize = roc.readBroadcast(1);
+        try {
+            modSize = roc.readBroadcast(1);
+        } catch (GameActionException e) {
+            System.out.println("Unexpected exception in execBeav");
+            e.printStackTrace();
         }
-        catch (GameActionException e) {
-                System.out.println("Unexpected exception in execBeav");
-                e.printStackTrace();
-            }
         boolean surroundingsNotSensed = true;
         boolean distNotPublished = true;
         int count = 0;
@@ -301,10 +349,9 @@ roc.broadcast(58000, 1);
                 //we want to be sure to execute this during the tower's downtime
                 //  aka at the start of the game
 
-
                 //this should execute at the start of the game regardless
                 if (surroundingsNotSensed) {
-                   // System.out.println("Code arrived here");
+                    // System.out.println("Code arrived here");
                     if (distNotPublished) {
                         computeDistanceToEnemyHQ(roc.getLocation());
                         roc.broadcast(65000, roc.getLocation().hashCode());
@@ -324,19 +371,15 @@ roc.broadcast(58000, 1);
         }
     }
 
-
     private static int computeDistanceToEnemyHQ(MapLocation location) {
         return location.distanceSquaredTo(roc.senseEnemyHQLocation());
     }
 
-
-    
     private static void initMemMap() throws GameActionException {
-            for (int i = 0; i < x; i++) {
-                roc.broadcast(i + 2, getRowHash(i));
-            }
+        for (int i = 0; i < x; i++) {
+            roc.broadcast(i + 2, getRowHash(i));
         }
-    
+    }
 
     //TODO It would be cool to look at the two lengths (between these two
     //      methods) and determine which way is faster to do
@@ -352,8 +395,6 @@ roc.broadcast(58000, 1);
 
     }
 
-
-    
     private static void publishSurroundings(int count) throws GameActionException {
         MapLocation[] info = MapLocation.getAllMapLocationsWithinRadiusSq(roc.getLocation(),
                 roc.getType().sensorRadiusSquared);
@@ -365,38 +406,36 @@ roc.broadcast(58000, 1);
 
     private static void updateLocationInfo(MapLocation loc) {
 
-        try{
-       // System.out.println("detecting location info");
-       // System.out.println(modSize);
+        try {
+            // System.out.println("detecting location info");
+            // System.out.println(modSize);
             boolean isNegative = false;
             int abslochashCode = loc.hashCode();
-            if (abslochashCode < 0)
-            {
+            if (abslochashCode < 0) {
                 abslochashCode = Math.abs(abslochashCode);
                 isNegative = true;
             }
-            
-            int memLocation = abslochashCode % (modSize/2);
-            if (!isNegative)
-              memLocation = memLocation + (modSize/2);
-        if (roc.senseOre(loc) > 10) {
-           // System.out.println( loc.hashCode());
-            if (isNegative)
-            roc.broadcast(memLocation, 1);
-            
-        } else if (roc.senseOre(loc) > 20) {
-           // System.out.println( loc.hashCode());
-            roc.broadcast(memLocation, 2);
-            
-        } else if (roc.senseTerrainTile(loc) != TerrainTile.NORMAL) {
-          //  System.out.println( loc.hashCode());
-            roc.broadcast(memLocation, 0);
-            
-        }
-        }
-        
-        catch (GameActionException g)
-        {
+
+            int memLocation = abslochashCode % (modSize / 2);
+            if (!isNegative) {
+                memLocation = memLocation + (modSize / 2);
+            }
+            if (roc.senseOre(loc) > 10) {
+                // System.out.println( loc.hashCode());
+                if (isNegative) {
+                    roc.broadcast(memLocation, 1);
+                }
+
+            } else if (roc.senseOre(loc) > 20) {
+                // System.out.println( loc.hashCode());
+                roc.broadcast(memLocation, 2);
+
+            } else if (roc.senseTerrainTile(loc) != TerrainTile.NORMAL) {
+                //  System.out.println( loc.hashCode());
+                roc.broadcast(memLocation, 0);
+
+            }
+        } catch (GameActionException g) {
             System.out.println("Exception caught in updatelocationinfo");
             g.printStackTrace();
         }
@@ -409,7 +448,29 @@ roc.broadcast(58000, 1);
     }
 
     private static void execSoldier() {
-        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+        try {
+            if (firstMove) {
+
+                firstMove = false;
+                flockNumber = roc.readBroadcast(soldierFlockNum);
+            }
+
+            while (true) {
+                if (roc.isWeaponReady()) {
+                    attackSomething();
+                }
+
+                if (roc.isCoreReady()) {
+                    waypoint[0] = roc.readBroadcast(currWayBuckets[flockNumber][0]);
+                    waypoint[1] = roc.readBroadcast(currWayBuckets[flockNumber][1]);
+
+                    takeNextMove(waypoint);
+                }
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
     }
 
     private static void execBasher() {
@@ -421,7 +482,55 @@ roc.broadcast(58000, 1);
     }
 
     private static void execBarracks() {
-        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+
+        if (firstMove) {
+            try {
+                firstMove = false;
+
+                //broadcast first waypoint for flock 2
+                int wayX = (enemyHQLoc.x - roc.getLocation().x) / 3 + roc.getLocation().x;
+                int wayY = (enemyHQLoc.y - roc.getLocation().y) / 3 + roc.getLocation().y;
+                System.out.println(wayX + ", " + wayY);
+                roc.broadcast(currWayBuckets[1][0], wayX);
+                roc.broadcast(currWayBuckets[1][1], wayY);
+                roc.broadcast(soldierFlockNum, 1);  //assign new soldiers to flock 1
+
+                //request tank factory
+                roc.broadcast(tankFactReq[0], roc.getLocation().x + 1);
+                roc.broadcast(tankFactReq[1], roc.getLocation().y + 1);
+                roc.broadcast(tankFactReq[2], 1);
+
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        }
+        while (true) {
+
+            try {
+                if (Clock.getRoundNum() == 1000) {
+                    int wayX = (enemyHQLoc.x - roc.getLocation().x) * 2 / 3 + roc.getLocation().x;
+                    int wayY = (enemyHQLoc.y - roc.getLocation().y) * 2 / 3 + roc.getLocation().y;
+                    System.out.println(wayX + ", " + wayY);
+                    roc.broadcast(currWayBuckets[1][0], wayX);
+                    roc.broadcast(currWayBuckets[1][1], wayY);
+                }
+
+                if (needSpawn(roc.getType())) {
+                    if (roc.isCoreReady() && roc.getTeamOre() >= 60) //thoretically we are going to change this so that it is more deterministic
+                    //as opposed to random
+                    {
+                        trySpawn(directions[rand.nextInt(8)], RobotType.SOLDIER);
+                    }
+                }
+            } catch (Exception e) {
+
+            }
+        }
+
+    }
+
+    private static void execTankFact() {
+
     }
 
     private static void execTrainingField() {
@@ -444,11 +553,11 @@ roc.broadcast(58000, 1);
         switch (type) {
             case BARRACKS: {
 
-                if (roc.readBroadcast(58001) == 1) {
+                if (roc.readBroadcast(58001) < 100) {
 
                     return true;
 
-                } else if (roc.readBroadcast(58002) == 1) {
+                } else if (roc.readBroadcast(58002) < 100) {
                     return true;
                 } else {
                     return false;
@@ -464,7 +573,7 @@ roc.broadcast(58000, 1);
             }
 
             case HQ: {
-                if (roc.readBroadcast(58000) == 1) {
+                if (roc.readBroadcast(58000) < 10) {
                     return true;
                 } else {
                     return false;
@@ -551,56 +660,6 @@ roc.broadcast(58000, 1);
         }
     }
 
-
-//    static MapLocation directionOffset(MapLocation m, Direction d) throws GameActionException
-//    {
-    //convert the direction
-    //      int x, y;
-//        switch(d)
-//        {
-//            case NORTH:
-//                x = 0;
-//                y = -1;
-//                break;
-//            case NORTH_EAST:
-//                x = -1;
-//                y = -1;
-//                break;
-//            case EAST:
-//                x = -1;
-//                y = 0;
-//                break;
-//            case SOUTH_EAST:
-//                x = -1;
-//                y = 1;
-//                        
-//                break;
-//            case SOUTH:
-//                x = 0;
-//                y = 1;
-//                break;
-//            case SOUTH_WEST:
-//                x = 1;
-//                y = 1;
-//                break;
-//            case WEST:
-//                x = 1;
-//                y = 0;
-//                break;
-//            case NORTH_WEST:
-//                x = 1;
-//                y = -1;
-//                break;
-//            default:
-//                throw new GameActionException(null, "Fucked up map location");
-//        }
-//        System.out.println("new location");
-//        System.out.println(m.x + d.dx);
-//        System.out.println(m.y + d.dy);
-//        return new MapLocation(m.x + d.dx, m.y + d.dy);
-//        
-//    }
-//    
     static void takeNextMove(int[] waypoint) {
 
         Direction next = Flock.computeMove(roc, waypoint);
@@ -614,9 +673,25 @@ roc.broadcast(58000, 1);
             roc.move(next);
 
         } catch (Exception e) {
-
+            e.printStackTrace();
         }
 
+    }
+    
+    static void takeWaypointMove(int[] waypoint){
+        Direction next = Flock.computeWaypointMove(roc, waypoint);
+        boolean movePossible;
+        try {
+            movePossible = roc.canMove(next);
+            if (!movePossible) {
+                next = intToDirection(rand.nextInt(8));
+            }
+
+            roc.move(next);
+
+        } catch (Exception e) {
+
+        }
     }
 
     static int directionToInt(Direction d) {
