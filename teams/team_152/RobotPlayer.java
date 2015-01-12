@@ -47,6 +47,27 @@ public class RobotPlayer {
     // building request fields
     static final int[] barracksReq = {60080, 60081, 60082}; //{x, y, requested?(1,0)}
     static final int[] tankFactReq = {60083, 60084, 60085}; //{x, y, requested?(1,0)}
+    
+    
+    /**
+     * This enum class will specify the location of the request flag for the 
+     * building request, with an INVARIANT specifying that the x coordinate will be
+     * reqLoc + 1, and the y-coordinate will be reqLoc+2
+     */
+    static enum buildingReq {
+        Barracks(60080), MinerFactory(60086), SupplyDepot(60089), TankFactory(60083), Helipad(60092), TrainingField(60095), HandwashStation(60098), AeroSpaceLab(60101), TechInstitute(60104); 
+        private final int reqLoc;
+        private buildingReq(int value)
+        {
+            this.reqLoc = value;
+        }
+        public static void updateMsg()
+        {
+            return;
+        }
+    }
+    //  int bb = buildingReq.Barracks.reqLoc;
+    
 
     /*action booleans*/
     static boolean buildReq = false;    //set to true for contruct building request
@@ -136,9 +157,9 @@ public class RobotPlayer {
                 roc.broadcast(beavFlockNum, 0);
 
                 //request barracks
-                roc.broadcast(barracksReq[0], ((enemyHQLoc.x - roc.getLocation().x) / 4 + roc.getLocation().x));
-                roc.broadcast(barracksReq[1], ((enemyHQLoc.y - roc.getLocation().y) / 4 + roc.getLocation().y));
-                roc.broadcast(barracksReq[2], 1);
+                roc.broadcast(barracksReq[1], ((enemyHQLoc.x - roc.getLocation().x) / 4 + roc.getLocation().x));
+                roc.broadcast(barracksReq[2], ((enemyHQLoc.y - roc.getLocation().y) / 4 + roc.getLocation().y));
+                roc.broadcast(barracksReq[0], 1);
             }
 
         } catch (GameActionException e) {
@@ -197,31 +218,34 @@ public class RobotPlayer {
                 flockNumber = roc.readBroadcast(beavFlockNum);
 
                 /*loop here to see if there is anything requested for build*/
-                if (roc.readBroadcast(barracksReq[2]) == 1) {   //build barracks?
+                if (roc.readBroadcast(barracksReq[0]) == 1) {   //build barracks?
 
-                    roc.broadcast(barracksReq[2], 0);   //acknowledge request to build
+                    roc.broadcast(barracksReq[0], 0);   //acknowledge request to build
 
                     /*if so, go to specified location and build one at specified location*/
-                    waypoint[0] = roc.readBroadcast(barracksReq[0]);
-                    waypoint[1] = roc.readBroadcast(barracksReq[1]);
+                    waypoint[0] = roc.readBroadcast(barracksReq[1]);
+                    waypoint[1] = roc.readBroadcast(barracksReq[2]);
 
                     System.out.println("Build barracks at" + waypoint[0] + ", " + waypoint[1]);
 
                     buildReq = true;
                     buildingType = 4;
 
-                } else if (roc.readBroadcast(tankFactReq[2]) == 1) {
+                } else if (roc.readBroadcast(tankFactReq[0]) == 1) {
 
-                    roc.broadcast(tankFactReq[2], 0);   //build tank factory?
+                    roc.broadcast(tankFactReq[0], 0);   //build tank factory?
 
                     /*if so, go to specified location and build one at specified location*/
-                    waypoint[0] = roc.readBroadcast(tankFactReq[0]);
-                    waypoint[1] = roc.readBroadcast(tankFactReq[1]);
+                    waypoint[0] = roc.readBroadcast(tankFactReq[1]);
+                    waypoint[1] = roc.readBroadcast(tankFactReq[2]);
 
                     System.out.println("Build barracks at" + waypoint[0] + ", " + waypoint[1]);
 
                     buildReq = true;
                     buildingType = 7;
+                    
+                    
+                
 
                 }
 
@@ -342,7 +366,10 @@ public class RobotPlayer {
                 //  aka at the start of the game
                 //this should execute at the start of the game regardless
                 if (surroundingsNotSensed) {
-                    // System.out.println("Code arrived here");
+                    
+                    //TODO: add a thread.sleep call here with a random number in order to get them all not to go at the same time
+                    // ^apparently roy says that this should never happen, so if this method goes to shit because of that, it's
+                    // ^ his fault, not mine
                     int xx = 0;
                     if (distNotPublished) {
                         int yy = computeDistanceToEnemyHQ(roc.getLocation());
@@ -350,8 +377,9 @@ public class RobotPlayer {
                         while (roc.readBroadcast(xx) != 0) {
                             xx += 1;
                         }
-                        roc.broadcast(xx + 12, roc.getLocation().hashCode());
                         roc.broadcast(xx, yy);
+                        roc.broadcast(xx + 12, roc.getLocation().hashCode());
+                        
                         distNotPublished = false;
                     } else {
                         int avgCoreLevel = publishSurroundings();
@@ -475,7 +503,7 @@ public class RobotPlayer {
                 break; // we've gotten the data that we needed
             } else {
                 int temp2 = roc.readBroadcast(65006 + i);
-                int temp3 = roc.readBroadcast(65012 + i);
+                int temp3 = roc.readBroadcast(65012 + i);  //holds the location of each object
                 double weight = temp - (1.4 * temp2);
                 if (i == 0) {
                     queue[i] = weight;
@@ -503,6 +531,10 @@ public class RobotPlayer {
                     }
                 }
             }
+        }
+        for (int i = 0; i < queue2.length; i++)
+        {
+            roc.broadcast(65000 + i, queue2[i]);
         }
     }
 
