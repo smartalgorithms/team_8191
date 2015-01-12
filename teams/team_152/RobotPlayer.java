@@ -46,8 +46,7 @@ public class RobotPlayer {
     static final int launcherFlockNum = 60077;
     // building request fields
     static final int[] barracksReq = {60080, 60081, 60082}; //{x, y, requested?(1,0)}
-    static final int[] tankFactReq = {60083, 60084, 60085}; //{x, y, requested?(1,0)}
-    
+    static final int[] tankFactReq = {60083, 60084, 60085}; //{x, y, requested?(1,0)}    
     
     /**
      * This enum class will specify the location of the request flag for the 
@@ -61,10 +60,7 @@ public class RobotPlayer {
         {
             this.reqLoc = value;
         }
-        public static void updateMsg()
-        {
-            return;
-        }
+
     }
     //  int bb = buildingReq.Barracks.reqLoc;
     
@@ -157,9 +153,10 @@ public class RobotPlayer {
                 roc.broadcast(beavFlockNum, 0);
 
                 //request barracks
-                roc.broadcast(barracksReq[1], ((enemyHQLoc.x - roc.getLocation().x) / 4 + roc.getLocation().x));
-                roc.broadcast(barracksReq[2], ((enemyHQLoc.y - roc.getLocation().y) / 4 + roc.getLocation().y));
-                roc.broadcast(barracksReq[0], 1);
+                requestBuilding(buildingReq.Barracks, ((enemyHQLoc.x - roc.getLocation().x) / 4 + roc.getLocation().x), ((enemyHQLoc.y - roc.getLocation().y) / 4 + roc.getLocation().y));
+//                roc.broadcast(barracksReq[1], ((enemyHQLoc.x - roc.getLocation().x) / 4 + roc.getLocation().x));
+//                roc.broadcast(barracksReq[2], ((enemyHQLoc.y - roc.getLocation().y) / 4 + roc.getLocation().y));
+//                roc.broadcast(barracksReq[0], 1);
             }
 
         } catch (GameActionException e) {
@@ -220,11 +217,15 @@ public class RobotPlayer {
                 /*loop here to see if there is anything requested for build*/
                 if (roc.readBroadcast(barracksReq[0]) == 1) {   //build barracks?
 
-                    roc.broadcast(barracksReq[0], 0);   //acknowledge request to build
-
+                //    roc.broadcast(barracksReq[0], 0);   //acknowledge request to build
+                    roc.broadcast(buildingReq.Barracks.reqLoc, 0);
                     /*if so, go to specified location and build one at specified location*/
-                    waypoint[0] = roc.readBroadcast(barracksReq[1]);
-                    waypoint[1] = roc.readBroadcast(barracksReq[2]);
+                    MapLocation locDirective = getBuildingRequestLoc(buildingReq.Barracks.reqLoc);
+                      waypoint[0] = locDirective.x;
+                      waypoint[1] = locDirective.y;
+                    
+//                    waypoint[0] = roc.readBroadcast(barracksReq[1]);
+//                    waypoint[1] = roc.readBroadcast(barracksReq[2]);
 
                     System.out.println("Build barracks at" + waypoint[0] + ", " + waypoint[1]);
 
@@ -233,20 +234,20 @@ public class RobotPlayer {
 
                 } else if (roc.readBroadcast(tankFactReq[0]) == 1) {
 
-                    roc.broadcast(tankFactReq[0], 0);   //build tank factory?
-
+                 //   roc.broadcast(tankFactReq[0], 0);   //build tank factory?
+                    roc.broadcast(buildingReq.TankFactory.reqLoc, 0);
                     /*if so, go to specified location and build one at specified location*/
-                    waypoint[0] = roc.readBroadcast(tankFactReq[1]);
-                    waypoint[1] = roc.readBroadcast(tankFactReq[2]);
+                    MapLocation locDirective = getBuildingRequestLoc(buildingReq.TankFactory.reqLoc);
+                      waypoint[0] = locDirective.x;
+                      waypoint[1] = locDirective.y;
+
+//                    waypoint[0] = roc.readBroadcast(tankFactReq[1]);
+//                    waypoint[1] = roc.readBroadcast(tankFactReq[2]);
 
                     System.out.println("Build barracks at" + waypoint[0] + ", " + waypoint[1]);
 
                     buildReq = true;
                     buildingType = 7;
-                    
-                    
-                
-
                 }
 
             } catch (Exception e) {
@@ -396,7 +397,47 @@ public class RobotPlayer {
             }
         }
     }
+    
+    /**
+     * This method is a wrapper for the actual method, this just allows for a
+     * location to be passed in as opposed to just a parameter
+     * 
+     * Method which will request a building to be built, depending on the parameters passed in
+     * @param buildingReq type : type of building to construct
+     * @param location loc : location on the map to broadcast
+     * If this method is being called, it is implicitly stated that the request bit will be 
+     * changed to 1, implying that the building should be built.
+     */
+    private static void requestBuilding(buildingReq type, MapLocation loc) throws GameActionException {
+        requestBuilding(type, loc.x, loc.y);
+    }
+    
+    
+    /**
+     * Method which will request a building to be built, depending on the parameters passed in
+     * @param buildingReq type : type of building to construct
+     * @param int x : x location on the map to broadcast
+     * @param int y: y location on the map to broadcast
+     * If this method is being called, it is implicitly stated that the request bit will be 
+     * changed to 1, implying that the building should be built.
+     */
+    private static void requestBuilding(buildingReq type, int x, int y) throws GameActionException {
+        roc.broadcast(type.reqLoc, 1);
+        roc.broadcast(type.reqLoc + 1, x);
+        roc.broadcast(type.reqLoc + 2, y);
+    }
 
+    /**
+     * simple method to just give you the location to travel to
+     * @param buildingReqFlag 
+     */
+    private static MapLocation getBuildingRequestLoc(int buildingReqFlag) throws GameActionException
+    {
+        int x = roc.readBroadcast(buildingReqFlag +1);
+        int y = roc.readBroadcast(buildingReqFlag + 2);
+        return new MapLocation(x, y);
+    }
+    
     private static int computeDistanceToEnemyHQ(MapLocation location) {
         return location.distanceSquaredTo(roc.senseEnemyHQLocation());
     }
@@ -591,9 +632,10 @@ public class RobotPlayer {
                 roc.broadcast(soldierFlockNum, 1);  //assign new soldiers to flock 1
 
                 //request tank factory
-                roc.broadcast(tankFactReq[0], roc.getLocation().x + 1);
-                roc.broadcast(tankFactReq[1], roc.getLocation().y + 1);
-                roc.broadcast(tankFactReq[2], 1);
+                requestBuilding(buildingReq.TankFactory, roc.getLocation().x + 1, roc.getLocation().y + 1);
+//                roc.broadcast(tankFactReq[1], roc.getLocation().x + 1);
+//                roc.broadcast(tankFactReq[2], roc.getLocation().y + 1);
+//                roc.broadcast(tankFactReq[0], 1);
 
             } catch (Exception e) {
                 e.printStackTrace();
