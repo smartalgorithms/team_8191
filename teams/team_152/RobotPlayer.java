@@ -74,15 +74,20 @@ public class RobotPlayer {
         ArrayList<Integer> botList;
         botList = new ArrayList<Integer>();
         try {
-            roc.broadcast(42, 1);
+            roc.broadcast(58000, 1);
             //determine reduced size of board
             x = 240 - Math.abs(roc.getLocation().x - enemyHQLoc.x);
             y = 240 - Math.abs(roc.getLocation().y - enemyHQLoc.y);
             modSize = x * y;
             roc.broadcast(1, modSize);
-            initMemMap();
+            roc.broadcast(65534, x);
+            roc.broadcast(65535, y);
+            
+            //move this to downtime area
+           // initMemMap();
         } catch (GameActionException e) {
-
+            System.out.println("exception in execHQ - pre infinite loop");
+            e.printStackTrace();
         }
 
         while (true) {
@@ -90,7 +95,7 @@ public class RobotPlayer {
             try {
                 //sense nearby bots
                 RobotInfo[] bots = roc.senseNearbyRobots(15, roc.getTeam());
-                System.out.println(bots.length);
+               // System.out.println(bots.length);
                 if (bots.length != 0) {
                     for (int i = 0; i < bots.length; i++) {
                         if (botList.contains(bots[i].ID)) {
@@ -124,6 +129,13 @@ public class RobotPlayer {
     static void execBeav() {
         //TODO write a check that will see if the health has changed, if so, 'fight or flight'
         //^ really gauge your location and from there broadcast the info, or do something else
+        try {
+        modSize = roc.readBroadcast(1);
+        }
+        catch (GameActionException e) {
+                System.out.println("Unexpected exception in execBeav");
+                e.printStackTrace();
+            }
         while (true) {
 //            System.out.println("Beaver at ");
 //            System.out.println(roc.getLocation().x);
@@ -157,6 +169,13 @@ public class RobotPlayer {
     }
 
     static void execTower() {
+                try {
+        modSize = roc.readBroadcast(1);
+        }
+        catch (GameActionException e) {
+                System.out.println("Unexpected exception in execBeav");
+                e.printStackTrace();
+            }
         boolean surroundingsNotSensed = true;
         boolean distNotPublished = true;
         int count = 0;
@@ -170,8 +189,11 @@ public class RobotPlayer {
                 //we want to be sure to execute this during the tower's downtime
                 //  aka at the start of the game
                 if (surroundingsNotSensed) {
+                   // System.out.println("Code arrived here");
                     if (distNotPublished) {
                         computeDistanceToEnemyHQ(roc.getLocation());
+                        roc.broadcast(65000, roc.getLocation().hashCode());
+                        distNotPublished = false;
                     } else {
                         publishSurroundings(count);
                     }
@@ -185,18 +207,18 @@ public class RobotPlayer {
         }
     }
 
+
+    
     private static void initMemMap() throws GameActionException {
-        if (roc.getType() == RobotType.HQ) {
-            return;
-        } else {
             for (int i = 0; i < x; i++) {
                 roc.broadcast(i + 2, getRowHash(i));
             }
         }
-    }
+    
 
     //TODO It would be cool to look at the two lengths (between these two
     //      methods) and determine which way is faster to do
+    // ^ Don't do this, it really doesnt matter a whole lot
     private static int getRowHash(int row) throws GameActionException {
         int[] data = new int[y];
         for (int i = 0; i < y; y++) {
@@ -212,7 +234,7 @@ public class RobotPlayer {
 
     }
 
-    //right now only the tower is using this method
+    
     private static void publishSurroundings(int count) throws GameActionException {
         MapLocation[] info = MapLocation.getAllMapLocationsWithinRadiusSq(roc.getLocation(),
                 roc.getType().sensorRadiusSquared);
@@ -222,16 +244,43 @@ public class RobotPlayer {
         }
     }
 
-    private static void updateLocationInfo(MapLocation loc) throws GameActionException {
+    private static void updateLocationInfo(MapLocation loc) {
 
+        try{
+       // System.out.println("detecting location info");
+       // System.out.println(modSize);
+            boolean isNegative = false;
+            int abslochashCode = loc.hashCode();
+            if (abslochashCode < 0)
+            {
+                abslochashCode = Math.abs(abslochashCode);
+                isNegative = true;
+            }
+            
+            int memLocation = abslochashCode % (modSize/2);
+            if (!isNegative)
+              memLocation = memLocation + (modSize/2);
         if (roc.senseOre(loc) > 10) {
-            roc.broadcast(loc.hashCode() % modSize, 1);
+           // System.out.println( loc.hashCode());
+            if (isNegative)
+            roc.broadcast(memLocation, 1);
+            
         } else if (roc.senseOre(loc) > 20) {
-            roc.broadcast(loc.hashCode() % modSize, 2);
+           // System.out.println( loc.hashCode());
+            roc.broadcast(memLocation, 2);
+            
         } else if (roc.senseTerrainTile(loc) != TerrainTile.NORMAL) {
-            roc.broadcast(loc.hashCode() % modSize, 0);
+          //  System.out.println( loc.hashCode());
+            roc.broadcast(memLocation, 0);
+            
         }
-
+        }
+        
+        catch (GameActionException g)
+        {
+            System.out.println("Exception caught in updatelocationinfo");
+            g.printStackTrace();
+        }
         //else broadcast nothing, and everyone will just simply assume that there is nothing in the way at that location
     }
 
@@ -274,37 +323,37 @@ public class RobotPlayer {
     static boolean needSpawn(RobotType type) throws GameActionException {
         switch (type) {
             case BARRACKS: {
-                if (roc.readBroadcast(43) == 1) {
+                if (roc.readBroadcast(58001) == 1) {
                     return true;
-                } else if (roc.readBroadcast(44) == 1) {
+                } else if (roc.readBroadcast(58002) == 1) {
                     return true;
                 } else {
                     return false;
                 }
             }
             case MINERFACTORY: {
-                if (roc.readBroadcast(46) == 1) {
+                if (roc.readBroadcast(58004) == 1) {
                     return true;
                 } else {
                     return false;
                 }
             }
             case HQ: {
-                if (roc.readBroadcast(42) == 1) {
+                if (roc.readBroadcast(58000) == 1) {
                     return true;
                 } else {
                     return false;
                 }
             }
             case HELIPAD: {
-                if (roc.readBroadcast(47) == 1) {
+                if (roc.readBroadcast(58005) == 1) {
                     return true;
                 } else {
                     return false;
                 }
             }
             case TECHNOLOGYINSTITUTE: {
-                if (roc.readBroadcast(45) == 1) {
+                if (roc.readBroadcast(58003) == 1) {
                     return true;
                 } else {
                     return false;
@@ -362,6 +411,35 @@ public class RobotPlayer {
         }
     }
 
+    static int directionToInt(Direction d) {
+        switch (d) {
+            case NORTH:
+                return 0;
+            case NORTH_EAST:
+                return 1;
+            case EAST:
+                return 2;
+            case SOUTH_EAST:
+                return 3;
+            case SOUTH:
+                return 4;
+            case SOUTH_WEST:
+                return 5;
+            case WEST:
+                return 6;
+            case NORTH_WEST:
+                return 7;
+            default:
+                return -1;
+        }
+    }
+
+} //end of class
+
+
+
+//depracated methods that will eventually get deleted
+
 //    static MapLocation directionOffset(MapLocation m, Direction d) throws GameActionException
 //    {
     //convert the direction
@@ -411,27 +489,3 @@ public class RobotPlayer {
 //        
 //    }
 //    
-    static int directionToInt(Direction d) {
-        switch (d) {
-            case NORTH:
-                return 0;
-            case NORTH_EAST:
-                return 1;
-            case EAST:
-                return 2;
-            case SOUTH_EAST:
-                return 3;
-            case SOUTH:
-                return 4;
-            case SOUTH_WEST:
-                return 5;
-            case WEST:
-                return 6;
-            case NORTH_WEST:
-                return 7;
-            default:
-                return -1;
-        }
-    }
-
-} //end of class
