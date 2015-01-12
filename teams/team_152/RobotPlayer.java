@@ -188,6 +188,7 @@ public class RobotPlayer {
                 }
                 //we want to be sure to execute this during the tower's downtime
                 //  aka at the start of the game
+                //this should execute at the start of the game regardless
                 if (surroundingsNotSensed) {
                    // System.out.println("Code arrived here");
                     if (distNotPublished) {
@@ -196,6 +197,7 @@ public class RobotPlayer {
                         distNotPublished = false;
                     } else {
                         publishSurroundings(count);
+                        surroundingsNotSensed = false;
                     }
                 }
 
