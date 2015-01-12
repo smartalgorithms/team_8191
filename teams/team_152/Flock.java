@@ -16,35 +16,22 @@ public class Flock {
 
     public static final int flocksize = 25;
 
-    public static final double alSepWeight = 1;
-    public static final double alCohWeight = 2;
-    public static final double axAttractWeight = 1;
-    public static final double wayAttractWeight = 3;
-    public double[] accel = new double[2];
+    public static final double alSepWeight = 1.5;
+    public static final double alCohWeight = 2.0;
+    public static final double axAttractWeight = 3.0;
+    public static final double wayAttractWeight = 1.0;
 
     /* array of compass rose tangents*/
     /*tan(23.5, 67.5, 112.5, 157.5)*/
     /*only need top-half of unit circle*/
-    public double[] roseTan = {0.41421, 2.4142, -2.4142, -0.41421};
+    public static double[] roseTan = {0.41421, 2.4142, -2.4142, -0.41421};
 
-    public int offset;
-
-    public Pathfinder bug;
-
-    /**
-     *
-     * @param number corresponds to flock number, 1 - 10
-     */
-    public Flock(int number) {
-        offset = number * flocksize * 2 + 3;    // 1 int for current flock size 2 ints for way point coordinate 2 ints for each bot in flock    
-    }
-
-    public Direction computeMove(RobotController rc, int[] waypoint) {
+    public static Direction computeMove(RobotController rc, int[] waypoint) {
+        double[] accel = new double[2];
         Team allies = rc.getTeam();
         Team enemies = allies.opponent();
         RobotInfo[] nearbyAllies = rc.senseNearbyRobots(24, allies);
         RobotInfo[] nearbyEnemies = rc.senseNearbyRobots(24, enemies);
-        
 
         //accumalate acceleration based on these rules
         double[] alliedSep = alliedSeparation(rc, nearbyAllies);   //Separation from allies
@@ -68,36 +55,98 @@ public class Flock {
         /* calculate total acceleration from all terms */
         accel[0] = alliedSep[0] + alliedCoh[0] + enemyAttract[0] + wayAttract[0];
         accel[1] = alliedSep[1] + alliedCoh[1] + enemyAttract[1] + wayAttract[1];
+//        accel[0] = wayAttract[0];
+//        accel[1] = wayAttract[1];
+//        System.out.println(accel[0] + ", " + accel[1]);
 
-        double ratio = accel[0] / accel[1];
-
-        if (accel[1] > 0) {   // y is positive
-            if (roseTan[0] > ratio) {
-                return EAST;
-            } else if (roseTan[0] < ratio && ratio < roseTan[1]) {
-                return NORTH_EAST;
-            } else if (roseTan[1] < ratio && ratio < roseTan[2]) {
-                return NORTH;
-            } else {
-                return NORTH_WEST;
-            }
-        } else {    //y is negative
-            if (roseTan[0] > ratio) {
-                return WEST;
-            } else if (roseTan[0] < ratio && ratio < roseTan[1]) {
-                return SOUTH_WEST;
-            } else if (roseTan[1] < ratio && ratio < roseTan[2]) {
+        /*Check if we should move at all in any cardinal direction*/
+        if (accel[0] == 0.0) {  // x component is zero
+            if (accel[1] > 0.0) { //y component is positive
                 return SOUTH;
-            } else {
-                return SOUTH_EAST;
+            } else if (accel[1] < 0.0) {    // y component is negative
+                return NORTH;
+            } else {            // y component is zero
+                return NONE;
             }
+        }
+
+        if (accel[1] == 0.0) {    // y component is zero
+            if (accel[0] > 0.0) { // x component is positive
+                return EAST;
+            } else if (accel[0] < 0.0) { // x component is negative
+                return WEST;
+            } else {    // y component is also zero (may be redundant)
+                return NONE;
+            }
+        }
+
+        /* otherwise find approximate angle of travel*/
+        double ratio = accel[1] / accel[0]; //tanx
+
+        if (accel[1] < 0.0) {   // y is negative
+            if (accel[0] < 0.0) {   // x is negative             
+                if (ratio < roseTan[0]) {
+                    return WEST;
+                } else if (ratio > roseTan[0] && ratio < roseTan[1]) {
+                    return NORTH_WEST;
+                } else {
+                    return NORTH;
+                }
+            } else {    // x is positive
+                if (ratio < roseTan[2]) {
+                    return NORTH;
+                } else if (ratio > roseTan[2] && ratio < roseTan[3]) {
+                    return NORTH_EAST;
+                } else {
+                    return EAST;
+                }
+            }
+
+//            if (roseTan[0] > ratio) {
+//                return WEST;
+//            } else if (roseTan[0] < ratio && ratio < roseTan[1]) {
+//                return NORTH_WEST;
+//            } else if (roseTan[1] < ratio && ratio < roseTan[2]) {
+//                return NORTH;
+//            } else {
+//                return NORTH_EAST;
+//            }
+        } else {    //y is positive
+            if (accel[0] > 0.0) {   // x is positive
+                if (ratio < roseTan[0]) {
+                    return EAST;
+                } else if (ratio > roseTan[0] && ratio < roseTan[1]) {
+                    return SOUTH_EAST;
+                } else {
+                    return SOUTH;
+                }
+            } else {    // x is negative
+                if (ratio < roseTan[2]) {
+                    return SOUTH;
+                } else if (ratio > roseTan[2] && ratio < roseTan[3]) {
+                    return SOUTH_WEST;
+                } else {
+                    return WEST;
+                }
+
+            }
+
+//            if (roseTan[0] > ratio) {
+//                return EAST;
+//            } else if (roseTan[0] < ratio && ratio < roseTan[1]) {
+//                return SOUTH_EAST;
+//            } else if (roseTan[1] < ratio && ratio < roseTan[2]) {
+//                return SOUTH;
+//            } else {
+//                return SOUTH_WEST;
+//            }
         }
     }
 
     /*returns vector to make room between neighbors*/
-    public double[] alliedSeparation(RobotController rc, RobotInfo[] nearbyAllies) {
+    public static double[] alliedSeparation(RobotController rc, RobotInfo[] nearbyAllies) {
 
-        double[] aveDirVect = {0, 0};
+        double[] aveDirVect = {0.0, 0.0};
 
         int desiredSep = 2;
 
@@ -107,7 +156,7 @@ public class Flock {
             MapLocation botLoc = rc.getLocation();
             int botX = botLoc.x;
             int botY = botLoc.y;
-            for (int i = size; i <= 0; i--) {
+            for (int i = size - 1; i >= 0; i--) {
                 int xdif = nearbyAllies[i].location.x - botX;
                 int ydif = nearbyAllies[i].location.y - botY;
 
@@ -116,15 +165,19 @@ public class Flock {
                     aveDirVect[1] += -ydif;
                 }
 
+//                System.out.println(xdif + ", " + ydif);
             }
 
             //normalize
             double mag = Math.sqrt(aveDirVect[0] * aveDirVect[0] + aveDirVect[1] * aveDirVect[1]);
-            aveDirVect[0] = aveDirVect[0] / mag;
-            aveDirVect[1] = aveDirVect[1] / mag;
+            if (mag != 0.0) {
+                aveDirVect[0] = aveDirVect[0] / mag;
+                aveDirVect[1] = aveDirVect[1] / mag;
+            }
 
         } catch (Exception e) {
-
+            System.out.println("There was an exeption in allied separation calculation");
+            e.printStackTrace();
         }
 
         return aveDirVect;
@@ -132,8 +185,8 @@ public class Flock {
     }
 
     /*returns vector to keep flock together*/
-    public double[] alliedCohesion(RobotController rc , RobotInfo[] nearbyAllies) {
-        double[] aveDirVect = {0, 0};
+    public static double[] alliedCohesion(RobotController rc, RobotInfo[] nearbyAllies) {
+        double[] aveDirVect = {0.0, 0.0};
 
         int desiredSep = 3;
 
@@ -143,7 +196,7 @@ public class Flock {
             MapLocation botLoc = rc.getLocation();
             int botX = botLoc.x;
             int botY = botLoc.y;
-            for (int i = size; i <= 0; i--) {
+            for (int i = size - 1; i >= 0; i--) {
                 int xdif = nearbyAllies[i].location.x - botX;
                 int ydif = nearbyAllies[i].location.y - botY;
 
@@ -156,19 +209,23 @@ public class Flock {
 
             //normalize
             double mag = Math.sqrt(aveDirVect[0] * aveDirVect[0] + aveDirVect[1] * aveDirVect[1]);
-            aveDirVect[0] = aveDirVect[0] / mag;
-            aveDirVect[1] = aveDirVect[1] / mag;
+            if (mag != 0.0) {
+                aveDirVect[0] = aveDirVect[0] / mag;
+                aveDirVect[1] = aveDirVect[1] / mag;
+            }
 
+//                        System.out.println(aveDirVect[0] + ", " + aveDirVect[1]);
         } catch (Exception e) {
-
+            System.out.println("There was an exeption in allied cohesion calculation");
+            e.printStackTrace();
         }
 
         return aveDirVect;
     }
-    
+
     /*returns vector to make sure flock attacks when necessary*/
-    public double[] enemyAttraction(RobotController rc , RobotInfo[] nearbyEnemies) {
-        double[] aveDirVect = {0, 0};
+    public static double[] enemyAttraction(RobotController rc, RobotInfo[] nearbyEnemies) {
+        double[] aveDirVect = {0.0, 0.0};
 
         int desiredSep = rc.getType().attackRadiusSquared;
 
@@ -178,57 +235,66 @@ public class Flock {
             MapLocation botLoc = rc.getLocation();
             int botX = botLoc.x;
             int botY = botLoc.y;
-            for (int i = size; i <= 0; i--) {
-                int xdif = nearbyEnemies[i].location.x - botX;
-                int ydif = nearbyEnemies[i].location.y - botY;
+            if (size != 0) {
+                for (int i = size - 1; i >= 0; i--) {
+                    int xdif = nearbyEnemies[i].location.x - botX;
+                    int ydif = nearbyEnemies[i].location.y - botY;
 
-                if ((xdif * xdif + ydif * ydif) > desiredSep) { // calculate new direction
-                    aveDirVect[0] += xdif; //go towards
-                    aveDirVect[1] += ydif;
+                    if ((xdif * xdif + ydif * ydif) > desiredSep) { // calculate new direction
+                        aveDirVect[0] += xdif; //go towards
+                        aveDirVect[1] += ydif;
+                    }
+
                 }
-
             }
 
             //normalize
             double mag = Math.sqrt(aveDirVect[0] * aveDirVect[0] + aveDirVect[1] * aveDirVect[1]);
-            aveDirVect[0] = aveDirVect[0] / mag;
-            aveDirVect[1] = aveDirVect[1] / mag;
 
+            if (mag != 0.0) {
+                aveDirVect[0] = aveDirVect[0] / mag;
+                aveDirVect[1] = aveDirVect[1] / mag;
+            }
+
+//            System.out.println(aveDirVect[0] + ", " + aveDirVect[1]);
         } catch (Exception e) {
-
+            System.out.println("There was an exeption in enemy attraction calculation");
+            e.printStackTrace();
         }
 
         return aveDirVect;
     }
-    
+
     /*returns vector that steers flock towards waypoint*/
     /*returns vector to make sure flock attacks when necessary*/
-    public double[] waypointAttraction(RobotController rc , int[] waypoint) {
-        double[] aveDirVect = {0, 0};
+    public static double[] waypointAttraction(RobotController rc, int[] waypoint) {
+        double[] aveDirVect = {0.0, 0.0};
 
         int desiredSep = 1;
 
         try {
             /*loop through all the bots and find average direction vector*/
             MapLocation botLoc = rc.getLocation();;
-           
-                int xdif = waypoint[0]- rc.getLocation().x;
-                int ydif = waypoint[1]- rc.getLocation().x;
 
-                if ((xdif * xdif + ydif * ydif) > desiredSep) { // calculate new direction
-                    aveDirVect[0] += xdif; //go towards
-                    aveDirVect[1] += ydif;
-                }
+            int xdif = waypoint[0] - rc.getLocation().x;
+            int ydif = waypoint[1] - rc.getLocation().y;
 
-            
+            if ((xdif * xdif + ydif * ydif) > desiredSep) { // calculate new direction
+                aveDirVect[0] += xdif; //go towards
+                aveDirVect[1] += ydif;
+            }
 
             //normalize
             double mag = Math.sqrt(aveDirVect[0] * aveDirVect[0] + aveDirVect[1] * aveDirVect[1]);
-            aveDirVect[0] = aveDirVect[0] / mag;
-            aveDirVect[1] = aveDirVect[1] / mag;
+            if (mag != 0.0) {
+                aveDirVect[0] = aveDirVect[0] / mag;
+                aveDirVect[1] = aveDirVect[1] / mag;
+            }
+//            System.out.println(aveDirVect[0] + ", " + aveDirVect[1]);
 
         } catch (Exception e) {
-
+            System.out.println("There was an exeption in waypoint attraction calculation");
+            e.printStackTrace();
         }
 
         return aveDirVect;
