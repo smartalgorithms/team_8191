@@ -20,6 +20,7 @@ public class RobotPlayer {
     static Random rand;
     static int myRange;
     static Team enemyTeam;
+
     static int flockOffset = 50;
 
     /*memory map*/
@@ -42,6 +43,11 @@ public class RobotPlayer {
     static int buildingType = 0;    // 0=none, 1=supply depot, 2=minerfactory, 3=techinstitute, 4=barracks, 5=helipad, 6=trainingfield, 7=tankfactory, 8=aerospacelab, 9=handwash
 
     static int[] waypoint = new int[2];    // current waypoint of the robot
+
+
+    static int modSize;
+    static int x;
+    static int y;
 
     //probably clean, but i dont know the bytecode cost of instantiating after declaring
     int enemyHQDist = computeDistanceToEnemyHQ(roc.getLocation());
@@ -100,15 +106,18 @@ public class RobotPlayer {
         ArrayList<Integer> botList;
         botList = new ArrayList<Integer>();
         try {
+
             if (firstMove) {
                 firstMove = false;
 
-                roc.broadcast(42, 1);
+roc.broadcast(58000, 1);
                 //determine reduced size of board
                 int x = 240 - (roc.getLocation().x - enemyHQLoc.x);
                 int y = 240 - (roc.getLocation().y - enemyHQLoc.y);
                 int modSize = x * y;
                 roc.broadcast(1, modSize);
+                          roc.broadcast(65534, x);
+            roc.broadcast(65535, y);
 
                 //broadcast the first waypoint for flock 1
                 int wayX = (enemyHQLoc.x - roc.getLocation().x) / 2 + roc.getLocation().x;
@@ -124,8 +133,9 @@ public class RobotPlayer {
                 roc.broadcast(barracksReq[2], 1);
             }
 
-        } catch (Exception e) {
-
+        } catch (GameActionException e) {
+            System.out.println("exception in execHQ - pre infinite loop");
+            e.printStackTrace();
         }
 
         while (true) {
@@ -133,7 +143,6 @@ public class RobotPlayer {
             try {
                 //sense nearby bots
                 RobotInfo[] bots = roc.senseNearbyRobots(15, roc.getTeam());
-//                System.out.println(bots.length);
                 if (bots.length != 0) {
                     for (int i = 0; i < bots.length; i++) {
                         if (botList.contains(bots[i].ID)) {
@@ -203,11 +212,21 @@ public class RobotPlayer {
 
         //TODO write a check that will see if the health has changed, if so, 'fight or flight'
         //^ really gauge your location and from there broadcast the info, or do something else
+
+        try {
+        modSize = roc.readBroadcast(1);
+        }
+        catch (GameActionException e) {
+                System.out.println("Unexpected exception in execBeav");
+                e.printStackTrace();
+            }
+
         while (true) {
 //            System.out.println("Beaver at ");
 //            System.out.println(roc.getLocation().x);
 //            System.out.println(roc.getLocation().y);
             try {
+
                 //       if (roc.getSupplyLevel() == 0 )//&& roc.isCoreReady())
                 //    {
                 //        if (roc.isCoreReady())
@@ -217,6 +236,16 @@ public class RobotPlayer {
                 //         continue;
                 //        }
                 //         }
+
+                if (roc.getSupplyLevel() == 0 && roc.isCoreReady()) {
+                    if (roc.isCoreReady()) {
+                        roc.mine();
+                    } else {
+                        roc.yield();
+                        continue;
+                    }
+                }
+
                 //run a check to      
                 if (roc.isWeaponReady()) {
                     attackSomething();
@@ -252,6 +281,13 @@ public class RobotPlayer {
     }
 
     static void execTower() {
+                try {
+        modSize = roc.readBroadcast(1);
+        }
+        catch (GameActionException e) {
+                System.out.println("Unexpected exception in execBeav");
+                e.printStackTrace();
+            }
         boolean surroundingsNotSensed = true;
         boolean distNotPublished = true;
         int count = 0;
@@ -264,11 +300,19 @@ public class RobotPlayer {
                 }
                 //we want to be sure to execute this during the tower's downtime
                 //  aka at the start of the game
+
+
+                //this should execute at the start of the game regardless
                 if (surroundingsNotSensed) {
+                   // System.out.println("Code arrived here");
                     if (distNotPublished) {
                         computeDistanceToEnemyHQ(roc.getLocation());
+                        roc.broadcast(65000, roc.getLocation().hashCode());
+                        distNotPublished = false;
                     } else {
                         publishSurroundings(count);
+                        surroundingsNotSensed = false;
+
                     }
                 }
 
@@ -280,11 +324,36 @@ public class RobotPlayer {
         }
     }
 
+
     private static int computeDistanceToEnemyHQ(MapLocation location) {
         return location.distanceSquaredTo(roc.senseEnemyHQLocation());
+    }
+
+
+    
+    private static void initMemMap() throws GameActionException {
+            for (int i = 0; i < x; i++) {
+                roc.broadcast(i + 2, getRowHash(i));
+            }
+        }
+    
+
+    //TODO It would be cool to look at the two lengths (between these two
+    //      methods) and determine which way is faster to do
+    // ^ Don't do this, it really doesnt matter a whole lot
+    private static int getRowHash(int row) throws GameActionException {
+        int[] data = new int[y];
+        for (int i = 0; i < y; y++) {
+            //TODO TESTME --- although I believe this should work
+            data[i] = roc.readBroadcast((i + 2 + x) * (row + 1));
+            //we know the map array starts at 2
+        }
+        return Arrays.hashCode(data);
 
     }
 
+
+    
     private static void publishSurroundings(int count) throws GameActionException {
         MapLocation[] info = MapLocation.getAllMapLocationsWithinRadiusSq(roc.getLocation(),
                 roc.getType().sensorRadiusSquared);
@@ -295,6 +364,43 @@ public class RobotPlayer {
     }
 
     private static void updateLocationInfo(MapLocation loc) {
+
+        try{
+       // System.out.println("detecting location info");
+       // System.out.println(modSize);
+            boolean isNegative = false;
+            int abslochashCode = loc.hashCode();
+            if (abslochashCode < 0)
+            {
+                abslochashCode = Math.abs(abslochashCode);
+                isNegative = true;
+            }
+            
+            int memLocation = abslochashCode % (modSize/2);
+            if (!isNegative)
+              memLocation = memLocation + (modSize/2);
+        if (roc.senseOre(loc) > 10) {
+           // System.out.println( loc.hashCode());
+            if (isNegative)
+            roc.broadcast(memLocation, 1);
+            
+        } else if (roc.senseOre(loc) > 20) {
+           // System.out.println( loc.hashCode());
+            roc.broadcast(memLocation, 2);
+            
+        } else if (roc.senseTerrainTile(loc) != TerrainTile.NORMAL) {
+          //  System.out.println( loc.hashCode());
+            roc.broadcast(memLocation, 0);
+            
+        }
+        }
+        
+        catch (GameActionException g)
+        {
+            System.out.println("Exception caught in updatelocationinfo");
+            g.printStackTrace();
+        }
+        //else broadcast nothing, and everyone will just simply assume that there is nothing in the way at that location
 
     }
 
@@ -337,37 +443,43 @@ public class RobotPlayer {
     static boolean needSpawn(RobotType type) throws GameActionException {
         switch (type) {
             case BARRACKS: {
-                if (roc.readBroadcast(43) == 1) {
+
+                if (roc.readBroadcast(58001) == 1) {
+
                     return true;
-                } else if (roc.readBroadcast(44) == 1) {
+
+                } else if (roc.readBroadcast(58002) == 1) {
                     return true;
                 } else {
                     return false;
                 }
             }
+
             case MINERFACTORY: {
-                if (roc.readBroadcast(46) == 1) {
+                if (roc.readBroadcast(58004) == 1) {
                     return true;
                 } else {
                     return false;
                 }
             }
+
             case HQ: {
-                if (roc.readBroadcast(42) == 1) {
+                if (roc.readBroadcast(58000) == 1) {
                     return true;
                 } else {
                     return false;
                 }
             }
+
             case HELIPAD: {
-                if (roc.readBroadcast(47) == 1) {
+                if (roc.readBroadcast(58005) == 1) {
                     return true;
                 } else {
                     return false;
                 }
             }
             case TECHNOLOGYINSTITUTE: {
-                if (roc.readBroadcast(45) == 1) {
+                if (roc.readBroadcast(58003) == 1) {
                     return true;
                 } else {
                     return false;
@@ -438,6 +550,7 @@ public class RobotPlayer {
             roc.build(directions[(dirint + offsets[offsetIndex] + 8) % 8], type);
         }
     }
+
 
 //    static MapLocation directionOffset(MapLocation m, Direction d) throws GameActionException
 //    {
@@ -553,3 +666,4 @@ public class RobotPlayer {
     }
 
 } //end of class
+
