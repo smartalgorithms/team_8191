@@ -244,11 +244,9 @@ public class RobotPlayer {
                         // a reasonable amount of supplies and go pick up more
                         //TODO: add a check here to determine the building type, along with a calculation
                         //for the journey back to get more supplies (we wouldn't want to waste any!)
-
                         if (waypoint[0] == roc.getLocation().x && waypoint[1] == roc.getLocation().y
                                 || (roc.getLocation().distanceSquaredTo(new MapLocation(waypoint[0], waypoint[1])) < 15 )) {
                             boolean successfulTransfer = false;
-                          
                             //determine if there exists a friendly building in range to pass supplies to
                             //this method call below could also be used to get more info, but im trying to keep computation
                                 //somewhat down at the moment...
