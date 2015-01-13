@@ -686,8 +686,41 @@ public class RobotPlayer {
         }
     }
 
+    //TODO: need to figure out how to handle how many to make (need allotment message bucket I believe)
     private static void execMinerFact() {
-        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+        
+         ArrayList<Integer> botList;
+        botList = new ArrayList<Integer>();
+        if (firstMove) {
+
+            try {
+                //probably add some useful code here...
+                firstMove = false;
+
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        }
+        while (true) {
+            
+        try{
+//             if (needSpawn(roc.getType())) {
+              if(true) {   //this is just for testing, definitely need a better way to do this      
+                        if (roc.isCoreReady() && roc.getTeamOre() >= 60) //thoretically we are going to change this so that it is more deterministic
+                        //as opposed to random
+                        {
+                            trySpawn(directions[rand.nextInt(8)], RobotType.MINER);
+                        }
+        }
+        
+        }
+        catch (GameActionException e)
+        {
+            System.out.println("GameActionException in execMinerFact");
+            e.printStackTrace();
+        }
+        }
+        
     }
 
     private static void execBarracks() {
