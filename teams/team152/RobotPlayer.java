@@ -198,6 +198,14 @@ public class RobotPlayer {
                     roc.broadcast(currWayBuckets[0][0], wayX);
                     roc.broadcast(currWayBuckets[0][1], wayY);
                 }
+                if (Clock.getRoundNum() == 1500) {
+                    int wayX = (enemyHQLoc.x - roc.getLocation().x) *3 / 4 + roc.getLocation().x;
+                    int wayY = (enemyHQLoc.y - roc.getLocation().y) *3/ 4 + roc.getLocation().y;
+                    System.out.println(wayX + ", " + wayY);
+                    roc.broadcast(currWayBuckets[0][0], wayX);
+                    roc.broadcast(currWayBuckets[0][1], wayY);
+                }
+                
             } catch (GameActionException e) {
                 System.out.println("Unexpected exception in execHQ");
                 e.printStackTrace();
@@ -587,6 +595,7 @@ public class RobotPlayer {
 
                     takeNextMove(waypoint);
                 }
+                roc.yield();
             }
         } catch (Exception e) {
             e.printStackTrace();
@@ -603,9 +612,6 @@ public class RobotPlayer {
             }
 
             while (true) {
-                if (roc.isWeaponReady()) {
-                    attackSomething();
-                }
 
                 if (roc.isCoreReady()) {
                     waypoint[0] = roc.readBroadcast(currWayBuckets[flockNumber][0]);
