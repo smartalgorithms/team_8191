@@ -641,9 +641,12 @@ public class RobotPlayer {
     }
 
     private static void execBarracks() {
-
+                ArrayList<Integer> botList;
+                botList = new ArrayList<Integer>();
         if (firstMove) {
+
             try {
+
                 firstMove = false;
 
                 //broadcast first waypoint for flock 2
@@ -654,7 +657,7 @@ public class RobotPlayer {
                 roc.broadcast(currWayBuckets[1][1], wayY);
                 roc.broadcast(soldierFlockNum, 1);  //assign new soldiers to flock 1
                 roc.broadcast(basherFlockNum, 1);  //assign new soldiers to flock 1
-
+                
                 //request tank factory
 //                requestBuilding(buildingReq.TankFactory, roc.getLocation().x + 1, roc.getLocation().y + 1);
 //                roc.broadcast(tankFactReq[1], roc.getLocation().x + 1);
@@ -667,6 +670,23 @@ public class RobotPlayer {
         while (true) {
 
             try {
+                if (Clock.getRoundNum() % 25 == 0) {
+                    botList = new ArrayList<Integer>();
+                }
+                //sense nearby bots
+                RobotInfo[] bots = roc.senseNearbyRobots(15, roc.getTeam());
+                if (bots.length != 0) {
+                    for (int i = 0; i < bots.length; i++) {
+                        if (botList.contains(bots[i].ID) || bots[i].type == RobotType.BEAVER) {
+                            continue;
+                        }
+                        roc.transferSupplies(900, bots[i].location);
+                        botList.add(bots[i].ID);
+                    }
+                }
+                
+                
+                
                 if (Clock.getRoundNum() == 1000) {
                     int wayX = (enemyHQLoc.x - roc.getLocation().x) * 2 / 3 + roc.getLocation().x;
                     int wayY = (enemyHQLoc.y - roc.getLocation().y) * 2 / 3 + roc.getLocation().y;
@@ -787,10 +807,6 @@ public class RobotPlayer {
 
     static void attackSomething() throws GameActionException {
         RobotInfo[] enemies = roc.senseNearbyRobots(myRange, enemyTeam);
-//        System.out.println(roc.getType().toString());
-//        System.out.println(myRange);
-//        System.out.println(enemyTeam);
-        // System.out.println(enemies.toString());
         if (enemies.length > 0) {
             roc.attackLocation(enemies[0].location);
         }
