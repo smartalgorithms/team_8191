@@ -8,6 +8,7 @@ package team152;
 import battlecode.common.*;
 import static battlecode.common.Direction.*;
 import static battlecode.common.RobotType.*;
+import java.util.Random;
 
 /**
  *
@@ -16,13 +17,20 @@ import static battlecode.common.RobotType.*;
 public class Bug {
 
     static boolean tracing = false; // true if we're currently tracing a wall
+    static boolean right = true;    // true if we're currently tracing using right hand rule
 
     static Direction previousDirection = null;  // last direction we took
 
     static int minDistanceSquared = -1;  // minimum distance to waypoint found
+    static MapLocation minLocation;
 
     static MapLocation possibleLocation;   // possible location for next move to be evaluated
 
+    static Random rand;
+    static int flockNum;
+
+    static final int flockThreshold = 50;      // If flocking, we step out of bug after this many turns
+    static int flockStep = 0;
     /**
      * compute next move according to the right hand rule
      *
@@ -31,63 +39,110 @@ public class Bug {
      * @param attemptDir
      * @return
      */
-    public static Direction computeMove(RobotController rc, int[] waypoint, Direction attemptDir) {
-
-        
+    public static Direction computeMove(RobotController rc, int[] waypoint, Direction attemptDir, MapLocation[] towers) {
 
         MapLocation waypointLocation = new MapLocation(waypoint[0], waypoint[1]);
 
-        Direction possibleMove = NONE;
+        if (flockNum > -1) {
+            int waypointFound = RobotPlayer.wayAck[flockNum];
+            if (waypointFound < 0) { // follow left hand rule
+                right = false;
+            } else if (waypointFound > 0) { // follow right hand rule
+                right = true;
+            }
+        }
+
 
         /*if this is the first turn in the trace, set the previous direction to last attempted direction*/
         if (previousDirection == null) {
             previousDirection = attemptDir;
-
+            minLocation = rc.getLocation();
             minDistanceSquared = rc.getLocation().distanceSquaredTo(waypointLocation);
+            rand = new Random(rc.getID());
+            int leftOrRight = rand.nextInt(2);
+            if (leftOrRight > 0) {
+                right = false;
+            }
+            flockNum = RobotPlayer.flockNumber;
             System.out.println("Entered bug mode, squared distance to waypoint is " + minDistanceSquared);
+
         }
-        
-        
+        Direction possibleMove;
+        if (right) {
+            System.out.println("Right!");
+            possibleMove = rightHandRule(rc, towers);
+        } else {
+            System.out.println("Left!");
+            possibleMove = leftHandRule(rc, towers);
+        }
+
+        previousDirection = possibleMove;
+
+        possibleLocation = rc.getLocation().add(possibleMove);
+        int newDistanceSquared = possibleLocation.distanceSquaredTo(waypointLocation);
+
+        if (newDistanceSquared < minDistanceSquared || flockStep > flockThreshold ) {
+//        if (newDistanceSquared < minDistanceSquared) {
+            System.out.println("Exited bug mode, distance to waypoint is " + newDistanceSquared);
+            tracing = false;
+            previousDirection = null;
+            minDistanceSquared = -1;
+            minLocation = null;
+            possibleLocation = null;
+            flockStep = 0;
+        }
+
+        minDistanceSquared = minDistanceSquared + 1;  // slowly make the min distance larger to escape long wall hugs
+        return possibleMove;
+    }
+
+    static Direction rightHandRule(RobotController rc, MapLocation[] towers) {
+
+        Direction possibleMove = NONE;
 
         boolean canMove = false;
 
         /*if forward is empty and right is empty, move right*/
-        if (rc.canMove(previousDirection)) {
-            
+//        if (rc.canMove(previousDirection)) {
+        if (terrainTileState(rc, previousDirection, towers) < 1) {
+
             switch (previousDirection) {
                 case NORTH:
                     possibleMove = EAST;
-                    if (rc.canMove(possibleMove)) {
+//                    if (rc.canMove(possibleMove)) {
+                    if (terrainTileState(rc, possibleMove, towers) < 1) {
                         canMove = true;
                     }
                     break;
                 case EAST:
                     possibleMove = SOUTH;
-                    if (rc.canMove(possibleMove)) {
+//                    if (rc.canMove(possibleMove)) {
+                    if (terrainTileState(rc, possibleMove, towers) < 1) {
                         canMove = true;
                     }
                     break;
                 case SOUTH:
                     possibleMove = WEST;
-                    if (rc.canMove(possibleMove)) {
+//                    if (rc.canMove(possibleMove)) {
+                    if (terrainTileState(rc, possibleMove, towers) < 1) {
                         canMove = true;
                     }
                     break;
                 case WEST:
                     possibleMove = NORTH;
-                    if (rc.canMove(possibleMove)) {
+//                    if (rc.canMove(possibleMove)) {
+                    if (terrainTileState(rc, possibleMove, towers) < 1) {
                         canMove = true;
                     }
                     break;
             }
         }
 
-                 
-        /*else if forward is empty but right is blocked move forward*/          
-        if (!canMove) {    
+        /*else if forward is empty but right is blocked move forward*/
+        if (!canMove) {
             possibleMove = previousDirection;
-            if (rc.canMove(previousDirection)) {  
-                
+            if (terrainTileState(rc, possibleMove, towers) < 1) {
+
                 canMove = true;
             }
         }
@@ -98,48 +153,128 @@ public class Bug {
                 case NORTH:
                 case NORTH_WEST:
                     possibleMove = WEST;
-                    if (rc.canMove(possibleMove)) {
+//                    if (rc.canMove(possibleMove)) {
+                    if (terrainTileState(rc, possibleMove, towers) < 1) {
                         canMove = true;
                     }
                     break;
                 case WEST:
                 case SOUTH_WEST:
                     possibleMove = SOUTH;
-                    if (rc.canMove(possibleMove)) {
+//                    if (rc.canMove(possibleMove)) {
+                    if (terrainTileState(rc, possibleMove, towers) < 1) {
                         canMove = true;
                     }
                     break;
                 case SOUTH:
                 case SOUTH_EAST:
                     possibleMove = EAST;
-                    if (rc.canMove(possibleMove)) {
+//                    if (rc.canMove(possibleMove)) {                    if (terrainTileState(rc, possibleMove) < 1) {
+                    if (terrainTileState(rc, possibleMove, towers) < 1) {
                         canMove = true;
                     }
                     break;
                 case EAST:
                 case NORTH_EAST:
                     possibleMove = NORTH;
-                    if (rc.canMove(possibleMove)) {
+//                    if (rc.canMove(possibleMove)) {
+                    if (terrainTileState(rc, possibleMove, towers) < 1) {
+                        canMove = true;
+                    }
+                    break;
+            }
+        }
+        return possibleMove;
+    }
+
+    static Direction leftHandRule(RobotController rc, MapLocation[] towers) {
+
+        Direction possibleMove = NONE;
+
+        boolean canMove = false;
+
+        /*if forward is empty and right is empty, move right*/
+//        if (rc.canMove(previousDirection)) {
+        if (terrainTileState(rc, previousDirection, towers) < 1) {
+
+            switch (previousDirection) {
+                case NORTH:
+                    possibleMove = WEST;
+//                    if (rc.canMove(possibleMove)) {
+                    if (terrainTileState(rc, possibleMove, towers) < 1) {
+                        canMove = true;
+                    }
+                    break;
+                case EAST:
+                    possibleMove = NORTH;
+//                    if (rc.canMove(possibleMove)) {
+                    if (terrainTileState(rc, possibleMove, towers) < 1) {
+                        canMove = true;
+                    }
+                    break;
+                case SOUTH:
+                    possibleMove = EAST;
+//                    if (rc.canMove(possibleMove)) {
+                    if (terrainTileState(rc, possibleMove, towers) < 1) {
+                        canMove = true;
+                    }
+                    break;
+                case WEST:
+                    possibleMove = SOUTH;
+//                    if (rc.canMove(possibleMove)) {
+                    if (terrainTileState(rc, possibleMove, towers) < 1) {
                         canMove = true;
                     }
                     break;
             }
         }
 
-        previousDirection = possibleMove;
-        
-        
-        possibleLocation = rc.getLocation().add(possibleMove);
-        int newDistanceSquared = possibleLocation.distanceSquaredTo(waypointLocation);
-        
-        if (newDistanceSquared < minDistanceSquared) {          
-            System.out.println("Exited bug mode, distance to waypoint is " + newDistanceSquared);
-            tracing = false;
-            previousDirection = null;
-            minDistanceSquared = -1;
-            possibleLocation = null;
+        /*else if forward is empty but right is blocked move forward*/
+        if (!canMove) {
+            possibleMove = previousDirection;
+            if (terrainTileState(rc, possibleMove, towers) < 1) {
+
+                canMove = true;
+            }
         }
 
+        /* else if left is empty move left until we can move*/
+        while (!canMove) {
+            switch (possibleMove) {
+                case NORTH:
+                case NORTH_WEST:
+                    possibleMove = EAST;
+//                    if (rc.canMove(possibleMove)) {
+                    if (terrainTileState(rc, possibleMove, towers) < 1) {
+                        canMove = true;
+                    }
+                    break;
+                case WEST:
+                case SOUTH_WEST:
+                    possibleMove = NORTH;
+//                    if (rc.canMove(possibleMove)) {
+                    if (terrainTileState(rc, possibleMove, towers) < 1) {
+                        canMove = true;
+                    }
+                    break;
+                case SOUTH:
+                case SOUTH_EAST:
+                    possibleMove = WEST;
+//                    if (rc.canMove(possibleMove)) {                    if (terrainTileState(rc, possibleMove) < 1) {
+                    if (terrainTileState(rc, possibleMove, towers) < 1) {
+                        canMove = true;
+                    }
+                    break;
+                case EAST:
+                case NORTH_EAST:
+                    possibleMove = SOUTH;
+//                    if (rc.canMove(possibleMove)) {
+                    if (terrainTileState(rc, possibleMove, towers) < 1) {
+                        canMove = true;
+                    }
+                    break;
+            }
+        }
         return possibleMove;
     }
 
@@ -147,16 +282,14 @@ public class Bug {
      * Determines whether the map location in the given direction from the robot
      * is void, or contains a robot (only call if rc.canMove() returns false)
      *
-     * @param rc
-     * @param loc
      * @return 0 if movable, 1 if void, 2 if contains robot
      */
-    public static int terrainTileState(RobotController roc, Direction dir) {
+    public static int terrainTileState(RobotController roc, Direction dir, MapLocation[] towers) {
+
+        possibleLocation = roc.getLocation().add(dir);   // possible location for testing 
 
         if (!roc.canMove(dir)) {
-            RobotInfo[] nearRobots = roc.senseNearbyRobots(2);   //sense all robots within moving distance
-
-            possibleLocation = roc.getLocation().add(dir);   // possible location for testing 
+            RobotInfo[] nearRobots = roc.senseNearbyRobots(2);   //sense all robots within moving distance          
 
             /*see if the move we're trying to make intersects another robot or void square, if so, turn off tracing */
             int numNearRobots = nearRobots.length;
@@ -172,8 +305,38 @@ public class Bug {
 
             return 1;
         } else {
+
+            /*if we're avoiding towers, make sure we don't move into them*/
+            if (towers != null) {
+                if (inTowerRange(roc, towers, possibleLocation)) {
+//                    System.out.println("Tower in Range!");
+                    return 1;
+                }
+            }
+
             return 0;
         }
+
+    }
+
+    /**
+     *
+     * @param rc
+     * @param towers
+     * @param newLocation
+     * @return true if in range of enemy towers, false if not
+     */
+    public static boolean inTowerRange(RobotController rc, MapLocation[] towers, MapLocation newLocation) {
+        int attackRange = 24;
+
+        int size = towers.length;
+        for (int i = 0; i < size; i++) {
+            if (newLocation.distanceSquaredTo(towers[i]) <= attackRange) {
+//                System.out.println("Tower in Range!");
+                return true;
+            }
+        }
+        return false;
 
     }
 

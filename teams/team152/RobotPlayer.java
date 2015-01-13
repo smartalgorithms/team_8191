@@ -40,8 +40,10 @@ public class RobotPlayer {
     static final int tankFlockNum = 60075;
     static final int commanderFlockNum = 60076;
     static final int launcherFlockNum = 60077;
+    
+    static final int[] wayAck = {60090, 60091, 60092, 60093, 60094, 60095, 60096, 60097, 60098, 60099};
 
-    static int iteration = 0;
+    static int barracksUnitIteration = 0;
 
     /**
      * This enum class will specify the location of the request flag for the
@@ -69,6 +71,7 @@ public class RobotPlayer {
     static boolean ferryReq = false; //set to true to tell robot to ferry supplies to the building it makes
     static int buildingType = 0;    // 0=none, 1=supply depot, 2=minerfactory, 3=techinstitute, 4=barracks, 5=helipad, 6=trainingfield, 7=tankfactory, 8=aerospacelab, 9=handwash
     static int[] waypoint = new int[2];    // current waypoint of the robot
+    static MapLocation waypointLoc;
     static int modSize;
     static int x;
     static int y;
@@ -80,7 +83,7 @@ public class RobotPlayer {
     static Direction[] directions = {Direction.NORTH, Direction.NORTH_EAST, Direction.EAST, Direction.SOUTH_EAST, Direction.SOUTH,
         Direction.SOUTH_WEST, Direction.WEST, Direction.NORTH_WEST};
     static boolean firstMove = true;
-    static int flockNumber;
+    static int flockNumber = -1 ;
 
     public static void run(RobotController rc) {
         roc = rc;
@@ -199,13 +202,13 @@ public class RobotPlayer {
                     roc.broadcast(currWayBuckets[0][1], wayY);
                 }
                 if (Clock.getRoundNum() == 1500) {
-                    int wayX = (enemyHQLoc.x - roc.getLocation().x) *3 / 4 + roc.getLocation().x;
-                    int wayY = (enemyHQLoc.y - roc.getLocation().y) *3/ 4 + roc.getLocation().y;
+                    int wayX = (enemyHQLoc.x - roc.getLocation().x) * 3 / 4 + roc.getLocation().x;
+                    int wayY = (enemyHQLoc.y - roc.getLocation().y) * 3 / 4 + roc.getLocation().y;
                     System.out.println(wayX + ", " + wayY);
                     roc.broadcast(currWayBuckets[0][0], wayX);
                     roc.broadcast(currWayBuckets[0][1], wayY);
                 }
-                
+
             } catch (GameActionException e) {
                 System.out.println("Unexpected exception in execHQ");
                 e.printStackTrace();
@@ -327,9 +330,8 @@ public class RobotPlayer {
                 } //TODO once the pathfinding gets resolved, implement this method, for now though just yield
                 //                else if(surroundingsNotSensed) 
                 //                    publishSurroundings();  //TODO fix this, currently it just attacks within this method
-                else {
-                    roc.yield();
-                }
+
+                roc.yield();
 
             } catch (GameActionException e) {
                 System.out.println("Exception caught in pre-loop of execBeav");
@@ -589,11 +591,25 @@ public class RobotPlayer {
                     attackSomething();
                 }
 
+                waypointLoc = new MapLocation(waypoint[0], waypoint[1]);
+                
+                if(roc.getLocation().equals(waypointLoc)){
+                   
+                    if(Bug.right){
+                        roc.broadcast(wayAck[flockNumber], 1);
+                    } else {
+                        roc.broadcast(wayAck[flockNumber], -1);
+                    }
+                    
+                    
+                }
+                
                 if (roc.isCoreReady()) {
                     waypoint[0] = roc.readBroadcast(currWayBuckets[flockNumber][0]);
                     waypoint[1] = roc.readBroadcast(currWayBuckets[flockNumber][1]);
 
-                    takeNextMove(waypoint);
+                    MapLocation[] towers = roc.senseEnemyTowerLocations();
+                    takeFlockMove(waypoint, towers);
                 }
                 roc.yield();
             }
@@ -617,8 +633,10 @@ public class RobotPlayer {
                     waypoint[0] = roc.readBroadcast(currWayBuckets[flockNumber][0]);
                     waypoint[1] = roc.readBroadcast(currWayBuckets[flockNumber][1]);
 
-                    takeNextMove(waypoint);
+                    MapLocation[] towers = roc.senseEnemyTowerLocations();
+                    takeFlockMove(waypoint, towers);
                 }
+                roc.yield();
             }
         } catch (Exception e) {
             e.printStackTrace();
@@ -665,7 +683,7 @@ public class RobotPlayer {
                 }
 
                 if (needSpawn(roc.getType())) {
-                    if (iteration % 2 == 0) {
+                    if (barracksUnitIteration % 2 == 0) {
                         if (roc.isCoreReady() && roc.getTeamOre() >= 60) //thoretically we are going to change this so that it is more deterministic
                         //as opposed to random
                         {
@@ -678,7 +696,7 @@ public class RobotPlayer {
                             trySpawn(directions[rand.nextInt(8)], RobotType.BASHER);
                         }
                     }
-                    iteration++;
+                    barracksUnitIteration++;
                 }
             } catch (Exception e) {
 
@@ -814,24 +832,96 @@ public class RobotPlayer {
 
     }
 
-    static void takeNextMove(int[] waypoint) {
+    /**
+     *
+     * @param waypoint
+     * @param towers null if you don't want tower avoidacne
+     */
+    static void takeFlockMove(int[] waypoint, MapLocation[] towers) {
 
-        Direction next = Flock.computeMove(roc, waypoint);
-        boolean movePossible;
+        Direction next = Direction.OMNI;
+        boolean movePossible = true;
+
         try {
-            movePossible = roc.canMove(next);
-            if (!movePossible) {
-                next = intToDirection(rand.nextInt(8));
+
+            if (Bug.tracing) {  // if we're tracing, continue tracing
+                next = Bug.computeMove(roc, waypoint, next, towers);
+                Bug.flockStep++;
+            } else {    // otherwise try to flock, if failure start tracing
+                next = Flock.computeMove(roc, waypoint);
+                if (Bug.terrainTileState(roc, next, towers) > 0) {
+                    movePossible = false;
+                }
+
+                while (!movePossible) {  // if the next move can't be taken
+
+                    if (Bug.terrainTileState(roc, next, towers) == 1) {   // the tile is void or contains buildings
+                        Bug.tracing = true;
+                        next = Bug.computeMove(roc, waypoint, next, towers);
+                        Bug.flockStep++;
+                        movePossible = true;
+                    } else {    // the tile contains a robot
+                        next = intToDirection(rand.nextInt(8));
+                        if (Bug.terrainTileState(roc, next, towers) > 0) {
+                            movePossible = true;
+                        }
+                    }
+                }
+
             }
 
-            roc.move(next);
+
+            /*make sure no moves with none*/
+            if (next != Direction.NONE && next != Direction.OMNI && roc.canMove(next)) {
+                roc.move(next);
+            }
 
         } catch (Exception e) {
-
+            e.printStackTrace();
         }
 
     }
 
+//    static void takeFlockNoTowerMove(int[] waypoint) {
+//
+//        Direction next = Direction.OMNI;
+//        boolean movePossible = true;
+//        
+//        MapLocation[] towers = roc.senseEnemyTowerLocations();
+//
+//        try {
+//
+//            if (Bug.tracing) {  // if we're tracing, continue tracing
+//                next = Bug.computeMove(roc, waypoint, next, towers);
+//            } else {    // otherwise try to flock, if failure start tracing
+//                next = Flock.computeMove(roc, waypoint);
+//                if(Bug.terrainTileState(roc, next, towers) > 0){
+//                    movePossible = false;
+//                }
+//
+//                if (!movePossible) {  // if the next move can't be taken
+//
+//                    if (Bug.terrainTileState(roc, next, towers) == 1) {   // the tile is void or contains buildings or in tower range
+//                        Bug.tracing = true;
+//                        next = Bug.computeMove(roc, waypoint, next, towers);
+//                    } else {    // the tile contains a robot
+//                        next = intToDirection(rand.nextInt(8));
+//                    }
+//                }
+//
+//            }
+//
+//
+//            /*make sure no moves with none*/
+//            if (next != Direction.NONE && next != Direction.OMNI && roc.canMove(next)) {
+//                roc.move(next);
+//            } 
+//
+//        } catch (Exception e) {
+//            e.printStackTrace();
+//        }
+//
+//    }
     static void takeWaypointMove(int[] waypoint) {
         Direction next = Direction.OMNI;
         boolean movePossible;
@@ -839,16 +929,16 @@ public class RobotPlayer {
         try {
 
             if (Bug.tracing) {  // if we're tracing, continue tracing
-                next = Bug.computeMove(roc, waypoint, next);
+                next = Bug.computeMove(roc, waypoint, next, null);
             } else {    // otherwise try to flock, if failure start tracing
                 next = Flock.computeWaypointMove(roc, waypoint);
                 movePossible = roc.canMove(next);
 
                 if (!movePossible) {  // if the next move can't be taken
 
-                    if (Bug.terrainTileState(roc, next) == 1) {   // the tile is void or contains buildings
+                    if (Bug.terrainTileState(roc, next, null) == 1) {   // the tile is void or contains buildings
                         Bug.tracing = true;
-                        next = Bug.computeMove(roc, waypoint, next);
+                        next = Bug.computeMove(roc, waypoint, next, null);
                     } else {    // the tile contains a robot
                         next = intToDirection(rand.nextInt(8));
                     }
@@ -860,8 +950,6 @@ public class RobotPlayer {
             /*make sure no moves with none*/
             if (next != Direction.NONE && next != Direction.OMNI && roc.canMove(next)) {
                 roc.move(next);
-            } else {
-                roc.yield();
             }
 
         } catch (Exception e) {
