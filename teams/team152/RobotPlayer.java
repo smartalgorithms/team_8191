@@ -3,7 +3,7 @@
  * To change this template file, choose Tools | Templates
  * and open the template in the editor.
  */
-package team_152;
+package team152;
 
 import battlecode.common.*;
 import java.util.*;
@@ -40,6 +40,8 @@ public class RobotPlayer {
     static final int tankFlockNum = 60075;
     static final int commanderFlockNum = 60076;
     static final int launcherFlockNum = 60077;
+
+    static int iteration = 0;
 
     /**
      * This enum class will specify the location of the request flag for the
@@ -163,8 +165,9 @@ public class RobotPlayer {
                 if (Clock.getRoundNum() == 13) {
                     ordertTowerPQ();
                 }
-                if (Clock.getRoundNum() % 35 == 0)
+                if (Clock.getRoundNum() % 35 == 0) {
                     botList = new ArrayList<Integer>();
+                }
                 //sense nearby bots
                 RobotInfo[] bots = roc.senseNearbyRobots(15, roc.getTeam());
                 if (bots.length != 0) {
@@ -195,6 +198,14 @@ public class RobotPlayer {
                     roc.broadcast(currWayBuckets[0][0], wayX);
                     roc.broadcast(currWayBuckets[0][1], wayY);
                 }
+                if (Clock.getRoundNum() == 1500) {
+                    int wayX = (enemyHQLoc.x - roc.getLocation().x) *3 / 4 + roc.getLocation().x;
+                    int wayY = (enemyHQLoc.y - roc.getLocation().y) *3/ 4 + roc.getLocation().y;
+                    System.out.println(wayX + ", " + wayY);
+                    roc.broadcast(currWayBuckets[0][0], wayX);
+                    roc.broadcast(currWayBuckets[0][1], wayY);
+                }
+                
             } catch (GameActionException e) {
                 System.out.println("Unexpected exception in execHQ");
                 e.printStackTrace();
@@ -235,34 +246,34 @@ public class RobotPlayer {
             System.out.println("Exception caught in pre-loop of execBeav");
             e.printStackTrace();
         }
-       
+
         while (true) {
             try {
+
+//               System.out.println("Waypoint: " + waypoint[0] + ", " + waypoint[1]);
                 if (roc.isCoreReady()) {
                     if (!buildReq && !ferryReq) {
-                     //we've arrived at location of waypoint, aka the beaver's building, so lets drop off
+                        //we've arrived at location of waypoint, aka the beaver's building, so lets drop off
                         // a reasonable amount of supplies and go pick up more
                         //TODO: add a check here to determine the building type, along with a calculation
                         //for the journey back to get more supplies (we wouldn't want to waste any!)
                         if (waypoint[0] == roc.getLocation().x && waypoint[1] == roc.getLocation().y
-                                || (roc.getLocation().distanceSquaredTo(new MapLocation(waypoint[0], waypoint[1])) < 15 )) {
+                                || (roc.getLocation().distanceSquaredTo(new MapLocation(waypoint[0], waypoint[1])) < 15)) {
                             boolean successfulTransfer = false;
                             //determine if there exists a friendly building in range to pass supplies to
                             //this method call below could also be used to get more info, but im trying to keep computation
-                                //somewhat down at the moment...
+                            //somewhat down at the moment...
                             RobotInfo[] surroundingData = roc.senseNearbyRobots(15, roc.getTeam());
-                            for(int i = 0; i < surroundingData.length; i++)
-                            {
-                                if (surroundingData[i].type == toBuild)   //if the type is the same as the one we built
-                                    //should add an ID check too               // not the best way, but if we're consistent, will be fine.. (or we need to be more clever)
+                            for (int i = 0; i < surroundingData.length; i++) {
+                                if (surroundingData[i].type == toBuild) //if the type is the same as the one we built
+                                //should add an ID check too               // not the best way, but if we're consistent, will be fine.. (or we need to be more clever)
                                 {
                                     roc.transferSupplies(9999999, surroundingData[i].location);  //TODO add exception handling on this line
                                     successfulTransfer = true;
                                 }
                             }
-                            if(successfulTransfer)
-                            {
-                                
+                            if (successfulTransfer) {
+
                                 MapLocation temp = roc.senseHQLocation();
                                 origWayPoint[0] = waypoint[0];
                                 origWayPoint[1] = waypoint[1];
@@ -270,38 +281,39 @@ public class RobotPlayer {
                                 waypoint[1] = temp.y;
                                 ferryReq = true;
                             }
-                        } 
+                        }
                         takeWaypointMove(waypoint);
 
                     } else if (buildReq) {
                         if (waypoint[0] == roc.getLocation().x && waypoint[1] == roc.getLocation().y) {
-                            tryBuild(Direction.NORTH, toBuild);  
+                            tryBuild(Direction.NORTH, toBuild);
                             buildReq = false;
                         }
                         takeWaypointMove(waypoint);
 
                     } else if (ferryReq) {
-                        
+
                         //check to see if at HQ, if so, get more supplies and reset waypoint
                         if (waypoint[0] == roc.getLocation().x && waypoint[1] == roc.getLocation().y
-                                || (roc.getLocation().distanceSquaredTo(new MapLocation(waypoint[0], waypoint[1])) < 15 ))
-                        {
+                                || (roc.getLocation().distanceSquaredTo(new MapLocation(waypoint[0], waypoint[1])) < 15)) {
                             //spin at this location until we're automatically replenished
-                            while(roc.getSupplyLevel() <= 10)
-                            {
-                                if (roc.isCoreReady())
-                                        roc.mine();
+                            while (roc.getSupplyLevel() <= 10) {
+                                if (roc.isCoreReady()) {
+                                    roc.mine();
+                                }
                             }
                             ferryReq = false;
                             waypoint[0] = origWayPoint[0];
                             waypoint[1] = origWayPoint[1];
                             takeWaypointMove(waypoint);
-                        }
-                        else
+                        } else {
+                            waypoint[0] = roc.readBroadcast(currWayBuckets[flockNumber][0]);
+                            waypoint[1] = roc.readBroadcast(currWayBuckets[flockNumber][1]);
                             takeWaypointMove(waypoint);
+                        }
+
                         //else I'd assume we just want to keep moving, seeing as the check for the waypoint
                         //where we start ferrying is checked above (I think..)
-                        
                         //also once we get to HQ, we need to set ferryReq to false and reset the waypoints to the Building struct
                     }
 
@@ -583,6 +595,7 @@ public class RobotPlayer {
 
                     takeNextMove(waypoint);
                 }
+                roc.yield();
             }
         } catch (Exception e) {
             e.printStackTrace();
@@ -591,7 +604,25 @@ public class RobotPlayer {
     }
 
     private static void execBasher() {
-        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+        try {
+            if (firstMove) {
+
+                firstMove = false;
+                flockNumber = roc.readBroadcast(basherFlockNum);
+            }
+
+            while (true) {
+
+                if (roc.isCoreReady()) {
+                    waypoint[0] = roc.readBroadcast(currWayBuckets[flockNumber][0]);
+                    waypoint[1] = roc.readBroadcast(currWayBuckets[flockNumber][1]);
+
+                    takeNextMove(waypoint);
+                }
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
     }
 
     private static void execMinerFact() {
@@ -611,13 +642,13 @@ public class RobotPlayer {
                 roc.broadcast(currWayBuckets[1][0], wayX);
                 roc.broadcast(currWayBuckets[1][1], wayY);
                 roc.broadcast(soldierFlockNum, 1);  //assign new soldiers to flock 1
+                roc.broadcast(basherFlockNum, 1);  //assign new soldiers to flock 1
 
                 //request tank factory
-                requestBuilding(buildingReq.TankFactory, roc.getLocation().x + 1, roc.getLocation().y + 1);
+//                requestBuilding(buildingReq.TankFactory, roc.getLocation().x + 1, roc.getLocation().y + 1);
 //                roc.broadcast(tankFactReq[1], roc.getLocation().x + 1);
 //                roc.broadcast(tankFactReq[2], roc.getLocation().y + 1);
 //                roc.broadcast(tankFactReq[0], 1);
-
             } catch (Exception e) {
                 e.printStackTrace();
             }
@@ -634,11 +665,20 @@ public class RobotPlayer {
                 }
 
                 if (needSpawn(roc.getType())) {
-                    if (roc.isCoreReady() && roc.getTeamOre() >= 60) //thoretically we are going to change this so that it is more deterministic
-                    //as opposed to random
-                    {
-                        trySpawn(directions[rand.nextInt(8)], RobotType.SOLDIER);
+                    if (iteration % 2 == 0) {
+                        if (roc.isCoreReady() && roc.getTeamOre() >= 60) //thoretically we are going to change this so that it is more deterministic
+                        //as opposed to random
+                        {
+                            trySpawn(directions[rand.nextInt(8)], RobotType.SOLDIER);
+                        }
+                    } else {
+                        if (roc.isCoreReady() && roc.getTeamOre() >= 80) //thoretically we are going to change this so that it is more deterministic
+                        //as opposed to random
+                        {
+                            trySpawn(directions[rand.nextInt(8)], RobotType.BASHER);
+                        }
                     }
+                    iteration++;
                 }
             } catch (Exception e) {
 
@@ -691,7 +731,7 @@ public class RobotPlayer {
             }
 
             case HQ: {
-                if (roc.readBroadcast(58000) < 2) {
+                if (roc.readBroadcast(58000) < 10) {
                     return true;
                 } else {
                     return false;
@@ -771,7 +811,7 @@ public class RobotPlayer {
         if (offsetIndex < 8) {
             roc.build(directions[(dirint + offsets[offsetIndex] + 8) % 8], type);
         }
-       
+
     }
 
     static void takeNextMove(int[] waypoint) {
@@ -789,15 +829,13 @@ public class RobotPlayer {
         } catch (Exception e) {
 
         }
-        
-        
 
     }
 
     static void takeWaypointMove(int[] waypoint) {
         Direction next = Direction.OMNI;
         boolean movePossible;
-        boolean voidMove;
+
         try {
 
             if (Bug.tracing) {  // if we're tracing, continue tracing
@@ -807,8 +845,8 @@ public class RobotPlayer {
                 movePossible = roc.canMove(next);
 
                 if (!movePossible) {  // if the next move can't be taken
-                    
-                    if(Bug.terrainTileState(roc, next) == 1){   // the tile is void or contains buildings
+
+                    if (Bug.terrainTileState(roc, next) == 1) {   // the tile is void or contains buildings
                         Bug.tracing = true;
                         next = Bug.computeMove(roc, waypoint, next);
                     } else {    // the tile contains a robot
@@ -818,16 +856,13 @@ public class RobotPlayer {
 
             }
 
-            System.out.println(next + ", " + Bug.tracing);
 
             /*make sure no moves with none*/
-            if(next != Direction.NONE && next != Direction.OMNI && roc.canMove(next)){
+            if (next != Direction.NONE && next != Direction.OMNI && roc.canMove(next)) {
                 roc.move(next);
             } else {
                 roc.yield();
             }
-            
-            
 
         } catch (Exception e) {
             e.printStackTrace();
