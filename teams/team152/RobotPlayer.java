@@ -165,7 +165,7 @@ public class RobotPlayer {
                 if (Clock.getRoundNum() == 13) {
                     ordertTowerPQ();
                 }
-                if (Clock.getRoundNum() % 35 == 0) {
+                if (Clock.getRoundNum() % 15 == 0) {
                     botList = new ArrayList<Integer>();
                 }
                 //sense nearby bots
@@ -223,7 +223,8 @@ public class RobotPlayer {
             if (firstMove) {
                 if (Clock.getRoundNum() <= 20) {
                     // we don't have to worry about pathfinding due to the building target is right next to us
-                    tryBuild(oppositeDirec(roc.getLocation().directionTo(roc.senseHQLocation())), RobotType.MINERFACTORY);
+                    tryBuild(oppositeDirec(roc.getLocation().directionTo(roc.senseHQLocation())), RobotType.MINERFACTORY); //this doesn't seem to be working because of rsrc
+                    
                 } else {
                     firstMove = false;
                     flockNumber = roc.readBroadcast(beavFlockNum);
@@ -250,20 +251,27 @@ public class RobotPlayer {
         while (true) {
             try {
 
-//               System.out.println("Waypoint: " + waypoint[0] + ", " + waypoint[1]);
+              // System.out.println("Waypoint: " + waypoint[0] + ", " + waypoint[1]);
                 if (roc.isCoreReady()) {
                     if (!buildReq && !ferryReq) {
                         //we've arrived at location of waypoint, aka the beaver's building, so lets drop off
                         // a reasonable amount of supplies and go pick up more
                         //TODO: add a check here to determine the building type, along with a calculation
                         //for the journey back to get more supplies (we wouldn't want to waste any!)
-                        if (waypoint[0] == roc.getLocation().x && waypoint[1] == roc.getLocation().y
-                                || (roc.getLocation().distanceSquaredTo(new MapLocation(waypoint[0], waypoint[1])) < 15)) {
+                        if (roc.getID() == 30620){
+                        System.out.println("testing transfer proximity");
+                        System.out.println((roc.getLocation().distanceSquaredTo(new MapLocation(waypoint[0], waypoint[1]))));
+                        System.out.println(roc.getLocation().x + " " + roc.getLocation().y);
+                        System.out.println(waypoint[0] + "  " + waypoint[1]);
+                        }
+                        if ((roc.getLocation().distanceSquaredTo(new MapLocation(waypoint[0], waypoint[1])) < 15)) {
+                            System.out.println("transfer proximity succeeded");
                             boolean successfulTransfer = false;
                             //determine if there exists a friendly building in range to pass supplies to
                             //this method call below could also be used to get more info, but im trying to keep computation
                             //somewhat down at the moment...
                             RobotInfo[] surroundingData = roc.senseNearbyRobots(15, roc.getTeam());
+                            System.out.println(Arrays.toString(surroundingData));
                             for (int i = 0; i < surroundingData.length; i++) {
                                 if (surroundingData[i].type == toBuild) //if the type is the same as the one we built
                                 //should add an ID check too               // not the best way, but if we're consistent, will be fine.. (or we need to be more clever)
@@ -282,20 +290,22 @@ public class RobotPlayer {
                                 ferryReq = true;
                             }
                         }
-                        takeWaypointMove(waypoint);
+                       
+                         takeWaypointMove(waypoint);
 
                     } else if (buildReq) {
                         if (waypoint[0] == roc.getLocation().x && waypoint[1] == roc.getLocation().y) {
                             tryBuild(Direction.NORTH, toBuild);
                             buildReq = false;
+                            continue;
                         }
-                        takeWaypointMove(waypoint);
+                        
+                         takeWaypointMove(waypoint);
 
                     } else if (ferryReq) {
 
                         //check to see if at HQ, if so, get more supplies and reset waypoint
-                        if (waypoint[0] == roc.getLocation().x && waypoint[1] == roc.getLocation().y
-                                || (roc.getLocation().distanceSquaredTo(new MapLocation(waypoint[0], waypoint[1])) < 15)) {
+                        if ( (roc.getLocation().distanceSquaredTo(new MapLocation(waypoint[0], waypoint[1])) < 15)) {
                             //spin at this location until we're automatically replenished
                             while (roc.getSupplyLevel() <= 10) {
                                 if (roc.isCoreReady()) {
@@ -303,12 +313,15 @@ public class RobotPlayer {
                                 }
                             }
                             ferryReq = false;
+
                             waypoint[0] = origWayPoint[0];
                             waypoint[1] = origWayPoint[1];
                             takeWaypointMove(waypoint);
-                        } else {
-                            waypoint[0] = roc.readBroadcast(currWayBuckets[flockNumber][0]);
-                            waypoint[1] = roc.readBroadcast(currWayBuckets[flockNumber][1]);
+                            continue;
+                        } 
+                    else {
+//                            waypoint[0] = roc.readBroadcast(currWayBuckets[flockNumber][0]);
+//                            waypoint[1] = roc.readBroadcast(currWayBuckets[flockNumber][1]);
                             takeWaypointMove(waypoint);
                         }
 
