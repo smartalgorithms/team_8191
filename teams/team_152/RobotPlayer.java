@@ -13,7 +13,6 @@ import java.util.*;
  * @author byrdie
  * @author albmin
  */
-
 //TODO: ADD HASHCODE BUCKETS FOR ALL THE TOWERS LOCATIONS
 public class RobotPlayer {
 
@@ -294,9 +293,9 @@ public class RobotPlayer {
                                     buildReq = false;   // ackowledge local building request
                                     break;
                                 case 7:
-                                   tryBuild(Direction.NORTH, RobotType.TANKFACTORY);  //this should be a case statement for all building types
+                                    tryBuild(Direction.NORTH, RobotType.TANKFACTORY);  //this should be a case statement for all building types
                                     buildReq = false;   // ackowledge local building request
-                                    break; 
+                                    break;
                             }
 
                         }
@@ -364,7 +363,7 @@ public class RobotPlayer {
                 }
             } catch (GameActionException e) {
                 System.out.println("Unexpected exception in execTower");
-                e.printStackTrace();           
+                e.printStackTrace();
             }
         }
     }
@@ -396,9 +395,10 @@ public class RobotPlayer {
     /**
      * Method that will publish the individual surroundings of each location
      * within the sensing radius of the RobotController calling this function
-     * @return average core value of the surroundings (for use with towers during
-     * start of game)
-     * @throws GameActionException 
+     *
+     * @return average core value of the surroundings (for use with towers
+     * during start of game)
+     * @throws GameActionException
      */
     private static int publishSurroundings() throws GameActionException {
         MapLocation[] info = MapLocation.getAllMapLocationsWithinRadiusSq(roc.getLocation(),
@@ -619,7 +619,7 @@ public class RobotPlayer {
             }
 
             case HQ: {
-                if (roc.readBroadcast(58000) < 10) {
+                if (roc.readBroadcast(58000) < 2) {
                     return true;
                 } else {
                     return false;
@@ -719,24 +719,50 @@ public class RobotPlayer {
             roc.move(next);
 
         } catch (Exception e) {
-            e.printStackTrace();
+
         }
+        
+        
 
     }
-    
-    static void takeWaypointMove(int[] waypoint){
-        Direction next = Flock.computeWaypointMove(roc, waypoint);
+
+    static void takeWaypointMove(int[] waypoint) {
+        Direction next = Direction.OMNI;
         boolean movePossible;
+        boolean voidMove;
         try {
-            movePossible = roc.canMove(next);
-            if (!movePossible) {
-                next = intToDirection(rand.nextInt(8));
+
+            if (Bug.tracing) {  // if we're tracing, continue tracing
+                next = Bug.computeMove(roc, waypoint, next);
+            } else {    // otherwise try to flock, if failure start tracing
+                next = Flock.computeWaypointMove(roc, waypoint);
+                movePossible = roc.canMove(next);
+
+                if (!movePossible) {  // if the next move can't be taken
+                    
+                    if(Bug.terrainTileState(roc, next) == 1){   // the tile is void or contains buildings
+                        Bug.tracing = true;
+                        next = Bug.computeMove(roc, waypoint, next);
+                    } else {    // the tile contains a robot
+                        next = intToDirection(rand.nextInt(8));
+                    }
+                }
+
             }
 
-            roc.move(next);
+            System.out.println(next + ", " + Bug.tracing);
+
+            /*make sure no moves with none*/
+            if(next != Direction.NONE && next != Direction.OMNI && roc.canMove(next)){
+                roc.move(next);
+            } else {
+                roc.yield();
+            }
+            
+            
 
         } catch (Exception e) {
-
+            e.printStackTrace();
         }
     }
 

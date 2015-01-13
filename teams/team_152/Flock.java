@@ -62,18 +62,18 @@ public class Flock {
 //        System.out.println(accel[0] + ", " + accel[1]);
 
         return vectorToDirection(accel);
-        
+
     }
-    
-    public static Direction computeWaypointMove(RobotController rc, int[] waypoint){
-        double[] accel = new double[2];
-        
+
+    public static Direction computeWaypointMove(RobotController rc, int[] waypoint) {
+//        double[] accel = new double[2];
+
         double[] wayAttract = waypointAttraction(rc, waypoint);    //Waypoint attraction
-        
+
         return vectorToDirection(wayAttract);
     }
-    
-    public static Direction vectorToDirection(double[] accel){
+
+    public static Direction vectorToDirection(double[] accel) {
         /*Check if we should move at all in any cardinal direction*/
         if (accel[0] == 0.0) {  // x component is zero
             if (accel[1] > 0.0) { //y component is positive
@@ -81,6 +81,7 @@ public class Flock {
             } else if (accel[1] < 0.0) {    // y component is negative
                 return NORTH;
             } else {            // y component is zero
+                System.out.println("No acceleration!");
                 return NONE;
             }
         }
@@ -91,6 +92,7 @@ public class Flock {
             } else if (accel[0] < 0.0) { // x component is negative
                 return WEST;
             } else {    // y component is also zero (may be redundant)
+                System.out.println("No acceleration!");
                 return NONE;
             }
         }
