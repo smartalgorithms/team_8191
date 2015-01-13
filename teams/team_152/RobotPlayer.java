@@ -13,8 +13,6 @@ import java.util.*;
  * @author byrdie
  * @author albmin
  */
-
-
 //TODO : in HQ code, clear the arraylist of nearby bots every 20-50 rounds
 public class RobotPlayer {
 
@@ -204,9 +202,9 @@ public class RobotPlayer {
     }
 
     static void execBeav() {
-         RobotType toBuild = null;
-        try { 
-           
+        RobotType toBuild = null;
+        try {
+
             if (firstMove) {
                 if (Clock.getRoundNum() <= 20) {
                     // we don't have to worry about pathfinding due to the building target is right next to us
@@ -227,76 +225,86 @@ public class RobotPlayer {
                         }
                     }
                 }
-            }    
+            }
             modSize = roc.readBroadcast(1);
         } catch (GameActionException e) {
             System.out.println("Exception caught in pre-loop of execBeav");
             e.printStackTrace();
         }
-        
-        while(true)
-        {
-            try
-            {
-                if (roc.isCoreReady())
-                {
-                    if(!buildReq && !ferryReq)
-                    {
+
+        while (true) {
+            try {
+                if (roc.isCoreReady()) {
+                    if (!buildReq && !ferryReq) {
                      //we've arrived at location of waypoint, aka the beaver's building, so lets drop off
                         // a reasonable amount of supplies and go pick up more
                         //TODO: add a check here to determine the building type, along with a calculation
                         //for the journey back to get more supplies (we wouldn't want to waste any!)
-                        
-                        if (waypoint[0] == roc.getLocation().x && waypoint[1] == roc.getLocation().y) {   
-                        //FIXME: this isn't going to work, as this location is going to be occupied by a building
+
+                        if (waypoint[0] == roc.getLocation().x && waypoint[1] == roc.getLocation().y
+                                || (roc.getLocation().distanceSquaredTo(new MapLocation(waypoint[0], waypoint[1])) < 15 )) {
+                            boolean successfulTransfer = false;
+                            //determine if there exists a friendly building in range to pass supplies to
+                            //this method call below could also be used to get more info, but im trying to keep computation
+                                //somewhat down at the moment...
+                            RobotInfo[] surroundingData = roc.senseNearbyRobots(15, roc.getTeam());
+                            for(int i = 0; i < surroundingData.length; i++)
+                            {
+                                if (surroundingData[i].ID == buildingMateID)
+                                {
+                                    roc.transferSupplies(9999999, surroundingData[i].location);
+                                    successfulTransfer = true;
+                                }
+                            }
+                            if(successfulTransfer)
+                            {
+                                MapLocation temp = roc.senseHQLocation();
+                                waypoint[0] = temp.x;
+                                waypoint[1] = temp.y;
+                                ferryReq = true;
+                            }
+                            
+                            //FIXME: this isn't going to work, as this location is going to be occupied by a building
+                        } else {
+                            waypoint[0] = roc.readBroadcast(currWayBuckets[flockNumber][0]);
+                            waypoint[1] = roc.readBroadcast(currWayBuckets[flockNumber][1]);
                         }
-                    else {
-        waypoint[0] = roc.readBroadcast(currWayBuckets[flockNumber][0]);
-        waypoint[1] = roc.readBroadcast(currWayBuckets[flockNumber][1]);
-        }
                         takeWaypointMove(waypoint);
-                        
-                    }
-                    else if (buildReq)  
-                    {
+
+                    } else if (buildReq) {
                         if (waypoint[0] == roc.getLocation().x && waypoint[1] == roc.getLocation().y) {
                             tryBuild(Direction.NORTH, toBuild);
                             buildReq = false;
                         }
                         takeWaypointMove(waypoint);
-                        
-                    }
-                    else if (ferryReq)
-                    {
+
+                    } else if (ferryReq) {
                         //check to see if at HQ, if so, get more supplies and reset waypoint
-                        
+
                         //else I'd assume we just want to keep moving, seeing as the check for the waypoint
                         //where we start ferrying is checked above (I think..)
                         
+                        //also once we get to HQ, we need to set ferryReq to false and reset the waypoints to the Building struct
                     }
-                    
+
                 }
-                
+
                 //TODO need to add 'passive mode' to a robot, that way it doesn't attack unless
                 //   it itself was attacked
-                if (roc.isWeaponReady())  //do this after the main purpose of the robot duties
+                if (roc.isWeaponReady()) //do this after the main purpose of the robot duties
                 {
                     attackSomething();
-                }
-                
-                //TODO once the pathfinding gets resolved, implement this method, for now though just yield
-//                else if(surroundingsNotSensed) 
-//                    publishSurroundings();  //TODO fix this, currently it just attacks within this method
-            else
-                {
+                } //TODO once the pathfinding gets resolved, implement this method, for now though just yield
+                //                else if(surroundingsNotSensed) 
+                //                    publishSurroundings();  //TODO fix this, currently it just attacks within this method
+                else {
                     roc.yield();
                 }
-            
+
+            } catch (GameActionException e) {
+                System.out.println("Exception caught in pre-loop of execBeav");
+                e.printStackTrace();
             }
-            catch (GameActionException e) {
-            System.out.println("Exception caught in pre-loop of execBeav");
-            e.printStackTrace();
-        }
         }
     }
 
@@ -434,8 +442,8 @@ public class RobotPlayer {
             avg += updateLocationInfo(info[i]);
             //if we can attack, might as well do so
             //TODO: we could update this method to work for all methods, such as if 
-                // the robot has no more cooldown, just go back to what it was doing
-            
+            // the robot has no more cooldown, just go back to what it was doing
+
             if (roc.isWeaponReady()) {
                 attackSomething();
             }
