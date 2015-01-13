@@ -320,8 +320,6 @@ public class RobotPlayer {
                             continue;
                         } 
                     else {
-//                            waypoint[0] = roc.readBroadcast(currWayBuckets[flockNumber][0]);
-//                            waypoint[1] = roc.readBroadcast(currWayBuckets[flockNumber][1]);
                             takeWaypointMove(waypoint);
                         }
 
