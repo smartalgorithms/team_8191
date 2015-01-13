@@ -163,6 +163,8 @@ public class RobotPlayer {
                 if (Clock.getRoundNum() == 13) {
                     ordertTowerPQ();
                 }
+                if (Clock.getRoundNum() % 35 == 0)
+                    botList = new ArrayList<Integer>();
                 //sense nearby bots
                 RobotInfo[] bots = roc.senseNearbyRobots(15, roc.getTeam());
                 if (bots.length != 0) {
@@ -202,6 +204,8 @@ public class RobotPlayer {
     }
 
     static void execBeav() {
+        MapLocation partner;  //once a robot is built by the beaver, it will be referenced here
+        int[] origWayPoint = new int[2];
         RobotType toBuild = null;
         try {
 
@@ -231,7 +235,7 @@ public class RobotPlayer {
             System.out.println("Exception caught in pre-loop of execBeav");
             e.printStackTrace();
         }
-
+       
         while (true) {
             try {
                 if (roc.isCoreReady()) {
@@ -244,43 +248,59 @@ public class RobotPlayer {
                         if (waypoint[0] == roc.getLocation().x && waypoint[1] == roc.getLocation().y
                                 || (roc.getLocation().distanceSquaredTo(new MapLocation(waypoint[0], waypoint[1])) < 15 )) {
                             boolean successfulTransfer = false;
+                          
                             //determine if there exists a friendly building in range to pass supplies to
                             //this method call below could also be used to get more info, but im trying to keep computation
                                 //somewhat down at the moment...
                             RobotInfo[] surroundingData = roc.senseNearbyRobots(15, roc.getTeam());
                             for(int i = 0; i < surroundingData.length; i++)
                             {
-                                if (surroundingData[i].ID == buildingMateID)
+                                if (surroundingData[i].type == toBuild)   //if the type is the same as the one we built
+                                    //should add an ID check too               // not the best way, but if we're consistent, will be fine.. (or we need to be more clever)
                                 {
-                                    roc.transferSupplies(9999999, surroundingData[i].location);
+                                    roc.transferSupplies(9999999, surroundingData[i].location);  //TODO add exception handling on this line
                                     successfulTransfer = true;
                                 }
                             }
                             if(successfulTransfer)
                             {
+                                
                                 MapLocation temp = roc.senseHQLocation();
+                                origWayPoint[0] = waypoint[0];
+                                origWayPoint[1] = waypoint[1];
                                 waypoint[0] = temp.x;
                                 waypoint[1] = temp.y;
                                 ferryReq = true;
                             }
-                            
-                            //FIXME: this isn't going to work, as this location is going to be occupied by a building
-                        } else {
-                            waypoint[0] = roc.readBroadcast(currWayBuckets[flockNumber][0]);
-                            waypoint[1] = roc.readBroadcast(currWayBuckets[flockNumber][1]);
-                        }
+                        } 
                         takeWaypointMove(waypoint);
 
                     } else if (buildReq) {
                         if (waypoint[0] == roc.getLocation().x && waypoint[1] == roc.getLocation().y) {
-                            tryBuild(Direction.NORTH, toBuild);
+                            tryBuild(Direction.NORTH, toBuild);  
                             buildReq = false;
                         }
                         takeWaypointMove(waypoint);
 
                     } else if (ferryReq) {
+                        
                         //check to see if at HQ, if so, get more supplies and reset waypoint
-
+                        if (waypoint[0] == roc.getLocation().x && waypoint[1] == roc.getLocation().y
+                                || (roc.getLocation().distanceSquaredTo(new MapLocation(waypoint[0], waypoint[1])) < 15 ))
+                        {
+                            //spin at this location until we're automatically replenished
+                            while(roc.getSupplyLevel() <= 10)
+                            {
+                                if (roc.isCoreReady())
+                                        roc.mine();
+                            }
+                            ferryReq = false;
+                            waypoint[0] = origWayPoint[0];
+                            waypoint[1] = origWayPoint[1];
+                            takeWaypointMove(waypoint);
+                        }
+                        else
+                            takeWaypointMove(waypoint);
                         //else I'd assume we just want to keep moving, seeing as the check for the waypoint
                         //where we start ferrying is checked above (I think..)
                         
@@ -753,6 +773,7 @@ public class RobotPlayer {
         if (offsetIndex < 8) {
             roc.build(directions[(dirint + offsets[offsetIndex] + 8) % 8], type);
         }
+       
     }
 
     static void takeNextMove(int[] waypoint) {
