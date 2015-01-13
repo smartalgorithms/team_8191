@@ -3,6 +3,8 @@
   <description>
     Build file for Battlecode 2015 players.
   </description>
+  
+
 
   <property name="path.base" location="."/>
   <property name="path.lib" location="${path.base}/lib"/>
@@ -54,6 +56,9 @@
         <include name="**/*.java"/>
     </scalac>
   </target>
+
+
+
 
   <target name="build" depends="-init,build-scala">
     <javac 

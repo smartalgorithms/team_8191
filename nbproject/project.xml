@@ -3,6 +3,9 @@
     <type>org.netbeans.modules.ant.freeform</type>
     <configuration>
         <general-data xmlns="http://www.netbeans.org/ns/freeform-project/1">
+            <name>Battlecode 2015</name>
+        </general-data>
+        <general-data xmlns="http://www.netbeans.org/ns/freeform-project/2">
             <!-- Do not use Project Properties customizer when editing this file manually. 
  To prevent the customizer from showing, create nbproject/project.properties file and enter 
 auxiliary.show.customizer=false 
@@ -13,9 +16,15 @@ auxiliary.show.customizer.message=<message>
             <properties/>
             <folders>
                 <source-folder>
+                    <label>Battlecode 2015</label>
+                    <location>.</location>
+                    <encoding>windows-1252</encoding>
+                </source-folder>
+                <source-folder>
                     <label>teams</label>
                     <type>java</type>
                     <location>teams</location>
+                    <encoding>windows-1252</encoding>
                 </source-folder>
             </folders>
             <ide-actions>
@@ -31,6 +40,23 @@ auxiliary.show.customizer.message=<message>
                 <action name="rebuild">
                     <target>clean</target>
                     <target>build</target>
+                </action>
+                <action name="debug">
+                    <script>nbproject/ide-targets.xml</script>
+                    <target>debug-nb</target>
+                </action>
+                <action name="compile.single">
+                    <script>nbproject/ide-file-targets.xml</script>
+                    <target>compile-selected-files-in-untests</target>
+                    <context>
+                        <property>files</property>
+                        <folder>untests</folder>
+                        <pattern>\.java$</pattern>
+                        <format>relative-path</format>
+                        <arity>
+                            <separated-files>,</separated-files>
+                        </arity>
+                    </context>
                 </action>
             </ide-actions>
             <export>
@@ -53,15 +79,17 @@ auxiliary.show.customizer.message=<message>
                     <ide-action name="rebuild"/>
                     <ide-action name="clean"/>
                     <ide-action name="run"/>
+                    <ide-action name="debug"/>
                 </context-menu>
             </view>
+            <subprojects/>
         </general-data>
-        <java-data xmlns="http://www.netbeans.org/ns/freeform-project-java/1">
+        <java-data xmlns="http://www.netbeans.org/ns/freeform-project-java/3">
             <compilation-unit>
                 <package-root>teams</package-root>
-                <classpath mode="compile">lib/battlecode-client.jar:lib/battlecode-player.jar:lib/battlecode-server.jar:lib/jogl.all.jar</classpath>
+                <classpath mode="compile">lib/battlecode-client.jar;lib/battlecode-player.jar;lib/battlecode-server.jar;lib/jogl.all.jar;lib/junit-4.10.jar</classpath>
                 <built-to>bin</built-to>
-                <source-level>1.5</source-level>
+                <source-level>1.6</source-level>
             </compilation-unit>
         </java-data>
     </configuration>
