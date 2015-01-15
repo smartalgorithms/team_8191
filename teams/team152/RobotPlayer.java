@@ -40,9 +40,9 @@ public class RobotPlayer {
     static final int tankFlockNum = 60075;
     static final int commanderFlockNum = 60076;
     static final int launcherFlockNum = 60077;
-
+    static Direction facing;
     static int iteration = 0;
-
+    
     /**
      * This enum class will specify the location of the request flag for the
      * building request, with an INVARIANT specifying that the x coordinate will
@@ -572,8 +572,33 @@ public class RobotPlayer {
         }
     }
 
-    private static void execMiner() {
-        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+    private static void execMiner() {//nevin
+        facing=Direction.values()[(int)(rand.nextDouble()*8)];
+        try{
+            while(true){
+                if(roc.senseOre(roc.getLocation())>1){
+                    if(roc.isCoreReady()&&roc.canMine()){
+                        roc.mine();
+            }
+                }else{
+                    if(rand.nextDouble()>.5){
+                       facing=facing.rotateLeft();
+                    }else{
+                        facing=facing.rotateRight();
+                    }
+                    if(roc.senseTerrainTile(roc.getLocation().add(facing))!=TerrainTile.NORMAL){
+			facing = facing.rotateLeft();
+		}
+                    if(roc.isCoreReady()&&roc.canMove(facing)){
+			roc.move(facing);
+		}
+                    
+                }
+        }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        //To change body of generated methods, choose Tools | Templates.
     }
 
     private static void execSoldier() {
