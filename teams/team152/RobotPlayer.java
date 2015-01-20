@@ -146,7 +146,7 @@ public class RobotPlayer {
                 firstMove = false;
 
                 friendlyTowers = roc.senseTowerLocations();
-                
+
                 roc.broadcast(58000, 1);
                 //determine reduced size of board
                 int x = 240 - (roc.getLocation().x - enemyHQLoc.x);
@@ -165,13 +165,14 @@ public class RobotPlayer {
                 roc.broadcast(beavFlockNum, 0);
 
                 //request barracks
-                requestBuilding(buildingReq.Barracks, friendlyTowers[1].x, friendlyTowers[1].y, true);
+                requestBuilding(buildingReq.Barracks, friendlyTowers[0].x, friendlyTowers[0].y, true);
                 //TODO need a better way to determine where I can put this, I think error checking is just needed overall for placing a building
-                requestBuilding(buildingReq.MinerFactory, friendlyTowers[0].x, friendlyTowers[0].y, false);
+                requestBuilding(buildingReq.MinerFactory, roc.senseHQLocation().x + 2, roc.senseHQLocation().y, false);
 
-                requestBuilding(buildingReq.SupplyDepot, friendlyTowers[0].x, friendlyTowers[0].y, true);
+                requestBuilding(buildingReq.SupplyDepot, roc.senseHQLocation().x + 4, roc.senseHQLocation().y, true);
 
-                requestBuilding(buildingReq.TankFactory, friendlyTowers[1].x, friendlyTowers[1].y, true);
+                requestBuilding(buildingReq.TankFactory, ((enemyHQLoc.x - roc.getLocation().x) / 5 + roc.getLocation().x),
+                        ((enemyHQLoc.y - roc.getLocation().y) / 5 + roc.getLocation().y), true);
 
             }
 
