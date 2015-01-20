@@ -23,8 +23,6 @@ public class RobotPlayer {
 		RobotInfo[] myRobots;
 
 		while(true) {
-            if (Clock.getRoundNum() == 1500)
-            System.out.println("MY TURN");
 			try {
 				rc.setIndicatorString(0, "This is an indicator string.");
 				rc.setIndicatorString(1, "I am a " + rc.getType());
@@ -70,15 +68,6 @@ public class RobotPlayer {
 					e.printStackTrace();
 				}
 			}
-
-            if (rc.getType() == RobotType.MISSILE) {
-                try {
-                    int i = rc.readBroadcast(5);
-                    rc.broadcast(5, 5);
-                } catch (Exception e) {
-                    e.printStackTrace();
-                }
-            }
 
 			if (rc.getType() == RobotType.TOWER) {
 				try {
