@@ -157,11 +157,12 @@ public class RobotPlayer {
 
                 //request barracks
                 requestBuilding(buildingReq.Barracks, ((enemyHQLoc.x - roc.getLocation().x) / 4 + roc.getLocation().x),
-                        ((enemyHQLoc.y - roc.getLocation().y) / 4 + roc.getLocation().y), true);
+                        ((enemyHQLoc.y - roc.getLocation().y) / 4 + roc.getLocation().y), false);
                 //TODO need a better way to determine where I can put this, I think error checking is just needed overall for placing a building
-                requestBuilding(buildingReq.MinerFactory, roc.senseHQLocation().x + 2, roc.senseHQLocation().y, false);
-
+                  requestBuilding(buildingReq.MinerFactory, roc.senseHQLocation().x + 2, roc.senseHQLocation().y, false);
+                 
             }
+            transferSupplies();
 
         } catch (GameActionException e) {
             System.out.println("exception in execHQ - pre infinite loop");
@@ -287,6 +288,7 @@ public class RobotPlayer {
                             break; //let another robot get the next request
                         }
                     }
+                     transferSupplies();
                 }
             }
             modSize = roc.readBroadcast(1);
@@ -641,15 +643,18 @@ public class RobotPlayer {
     }
 
      private static void execMiner() {//nevin
+          ArrayList<Integer> botList;
+        botList = new ArrayList<Integer>();
         facing=Direction.values()[(int)(rand.nextDouble()*8)];
+        
         try{
             while(true){
              //   roc.getLocation();
-                if(roc.senseOre(roc.getLocation())>1){
+                if(roc.senseOre(roc.getLocation())>2){
                     if(roc.isCoreReady()&&roc.canMine()){
                         roc.mine();
             }
-                }else{
+                  }else{
                     if(rand.nextDouble()>.9){
                        facing=facing.rotateLeft();
                     }else if(rand.nextDouble()<.1){
@@ -662,25 +667,41 @@ public class RobotPlayer {
                             facing = facing.rotateRight();
                         }
 		}
-//                    if(roc.isCoreReady()&&roc.canMove(facing)){
+                    
 //                        int counter=0;
 //                        boolean done=true;
 //                        while( done==true){
-//                        if(roc.senseOre(roc.getLocation().add(facing))>1 || done==false){
-//			roc.move(facing);
+//                        if(roc.senseOre(roc.getLocation().add(facing))>2 || done==false){
+//			done=false;
 //                        }else{
 //                            facing=facing.rotateRight();
 //                            counter++;
-//                            if(counter==8){
+//                            if(counter>=8){
 //                                done=false;
 //                            }
 //                        }
 //                    }
-//		}
+		
                  if(roc.isCoreReady()&&roc.canMove(facing)){
 			roc.move(facing);
 		} 
                 }
+//                 RobotInfo[] bots = roc.senseNearbyRobots(15, roc.getTeam());
+//                if (bots.length != 0) {
+//                    for (int i = 0; i < bots.length; i++) {
+//                        if (botList.contains(bots[i].ID)) {
+//                            continue;
+//                        }
+//                        double supply=roc.getSupplyLevel();
+//                        double transferAmount=0;
+//                        if(bots[i].supplyLevel<supply){
+//                            transferAmount=(roc.getSupplyLevel()-bots[i].supplyLevel);
+//                        roc.transferSupplies((int)transferAmount, bots[i].location);
+//                        botList.add(bots[i].ID);
+//                    
+//                        }}
+//                }
+                   transferSupplies();
                 roc.yield();
         }
         } catch (Exception e) {
@@ -722,6 +743,7 @@ public class RobotPlayer {
                     MapLocation[] towers = roc.senseEnemyTowerLocations();
                     takeFlockMove(waypoint, towers);
                 }
+                transferSupplies();
                 roc.yield();
             }
         } catch (Exception e) {
@@ -747,6 +769,7 @@ public class RobotPlayer {
                     MapLocation[] towers = roc.senseEnemyTowerLocations();
                     takeFlockMove(waypoint, towers);
                 }
+                transferSupplies();
                 roc.yield();
             }
         } catch (Exception e) {
@@ -757,8 +780,8 @@ public class RobotPlayer {
     //TODO: need to figure out how to handle how many to make (need allotment message bucket I believe)
     private static void execMinerFact() {
         
-         ArrayList<Integer> botList;
-        botList = new ArrayList<Integer>();
+       ArrayList<Integer> botList;
+      botList = new ArrayList<Integer>();
         if (firstMove) {
 
             try {
@@ -774,12 +797,24 @@ public class RobotPlayer {
         try{
 //             if (needSpawn(roc.getType())) {
               if(true) {   //this is just for testing, definitely need a better way to do this      
-                        if (roc.isCoreReady() && roc.getTeamOre() >= 60) //thoretically we are going to change this so that it is more deterministic
+                        if (roc.isCoreReady() && roc.getTeamOre() <= 1000) //thoretically we are going to change this so that it is more deterministic
                         //as opposed to random
                         {
                             trySpawn(directions[rand.nextInt(8)], RobotType.MINER);
                         }
-        }
+        } 
+             // transferSupplies();
+              RobotInfo[] bots = roc.senseNearbyRobots(15, roc.getTeam());
+                if (bots.length != 0) {
+                    for (int i = 0; i < bots.length; i++) {
+                        if (botList.contains(bots[i].ID)) {
+                            continue;
+                        }
+                        
+                        roc.transferSupplies(5000, bots[i].location);
+                       // botList.add(bots[i].ID);
+                    }
+                }
         
         }
         catch (GameActionException e)
@@ -790,6 +825,24 @@ public class RobotPlayer {
         }
         
     }
+    private static void transferSupplies() throws GameActionException {
+		RobotInfo[] nearbyAllies = roc.senseNearbyRobots(roc.getLocation(),15,roc.getTeam());
+		double lowestSupply = roc.getSupplyLevel();
+		double transferAmount = 0;
+		MapLocation suppliesToThisLocation = null;
+		for(RobotInfo nAll:nearbyAllies){
+			if(nAll.supplyLevel<lowestSupply){
+				lowestSupply = nAll.supplyLevel;
+				transferAmount = (roc.getSupplyLevel()-nAll.supplyLevel)/2;
+				suppliesToThisLocation = nAll.location;
+			}
+		}
+		if(suppliesToThisLocation!=null){
+			roc.transferSupplies((int)transferAmount, suppliesToThisLocation);
+		}
+	}
+
+
 
     private static void execBarracks() {
         ArrayList<Integer> botList;
