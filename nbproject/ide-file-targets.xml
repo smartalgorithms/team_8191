@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 <?xml version="1.0" encoding="UTF-8"?>
 <project basedir=".." name="Battlecode 2015-IDE">
     <!-- TODO: edit the following target according to your needs -->
@@ -22,3 +23,16 @@
         </java>
     </target>
 </project>
+=======
+<?xml version="1.0" encoding="UTF-8"?>
+<project basedir=".." name="Battlecode 2015-IDE">
+    <!-- TODO: edit the following target according to your needs -->
+    <!-- (more info: http://www.netbeans.org/kb/articles/freeform-config.html#compilesingle) -->
+    <target name="compile-selected-files-in-untests">
+        <fail unless="files">Must set property 'files'</fail>
+        <!-- TODO decide on and define some value for ${build.classes.dir} -->
+        <mkdir dir="${build.classes.dir}"/>
+        <javac destdir="${build.classes.dir}" includes="${files}" source="1.6" srcdir="untests"/>
+    </target>
+</project>
+>>>>>>> fd429705295d5b2cc33c4cabc107c710ef19737d

@@ -40,9 +40,17 @@ public class RobotPlayer {
     static final int tankFlockNum = 60075;
     static final int commanderFlockNum = 60076;
     static final int launcherFlockNum = 60077;
+
     static Direction facing;
     static int iteration = 0;
     
+
+    
+    static final int[] wayAck = {60090, 60091, 60092, 60093, 60094, 60095, 60096, 60097, 60098, 60099};
+
+    static int barracksUnitIteration = 0;
+
+
     /**
      * This enum class will specify the location of the request flag for the
      * building request, with an INVARIANT specifying that the x coordinate will
@@ -69,6 +77,7 @@ public class RobotPlayer {
     static boolean ferryReq = false; //set to true to tell robot to ferry supplies to the building it makes
     static int buildingType = 0;    // 0=none, 1=supply depot, 2=minerfactory, 3=techinstitute, 4=barracks, 5=helipad, 6=trainingfield, 7=tankfactory, 8=aerospacelab, 9=handwash
     static int[] waypoint = new int[2];    // current waypoint of the robot
+    static MapLocation waypointLoc;
     static int modSize;
     static int x;
     static int y;
@@ -80,7 +89,7 @@ public class RobotPlayer {
     static Direction[] directions = {Direction.NORTH, Direction.NORTH_EAST, Direction.EAST, Direction.SOUTH_EAST, Direction.SOUTH,
         Direction.SOUTH_WEST, Direction.WEST, Direction.NORTH_WEST};
     static boolean firstMove = true;
-    static int flockNumber;
+    static int flockNumber = -1 ;
 
     public static void run(RobotController rc) {
         roc = rc;
@@ -152,7 +161,11 @@ public class RobotPlayer {
                 roc.broadcast(beavFlockNum, 0);
 
                 //request barracks
-                requestBuilding(buildingReq.Barracks, ((enemyHQLoc.x - roc.getLocation().x) / 4 + roc.getLocation().x), ((enemyHQLoc.y - roc.getLocation().y) / 4 + roc.getLocation().y));
+                requestBuilding(buildingReq.Barracks, ((enemyHQLoc.x - roc.getLocation().x) / 4 + roc.getLocation().x),
+                        ((enemyHQLoc.y - roc.getLocation().y) / 4 + roc.getLocation().y), true);
+                //TODO need a better way to determine where I can put this, I think error checking is just needed overall for placing a building
+                requestBuilding(buildingReq.MinerFactory, roc.senseHQLocation().x + 2, roc.senseHQLocation().y, false);
+
             }
 
         } catch (GameActionException e) {
@@ -162,10 +175,36 @@ public class RobotPlayer {
 
         while (true) {
             try {
+
+                //this is a little hacky, but i think it could be the start of 
+                //pre-game data
+                RobotInfo[] myRobots = roc.senseNearbyRobots(999999, roc.getTeam());
+                int numSoldiers = 0;
+                int numBashers = 0;
+                int numBeavers2 = 0;
+                int numBarracks = 0;
+                int numMiners = 0;
+                for (RobotInfo r : myRobots) {
+                    RobotType type = r.type;
+                    if (type == RobotType.SOLDIER) {
+                        numSoldiers++;
+                    } else if (type == RobotType.BASHER) {
+                        numBashers++;
+                    } else if (type == RobotType.BEAVER) {
+                        numBeavers2++;
+                    } else if (type == RobotType.BARRACKS) {
+                        numBarracks++;
+                    } else if (type == RobotType.MINER) {
+                        numMiners++;
+                    }
+                }
+                if (numMiners >= 3) {
+                    requestBuilding(buildingReq.Barracks, ((enemyHQLoc.x - roc.getLocation().x) / 4 + roc.getLocation().x), ((enemyHQLoc.y - roc.getLocation().y) / 4 + roc.getLocation().y), true);
+                }
                 if (Clock.getRoundNum() == 13) {
                     ordertTowerPQ();
                 }
-                if (Clock.getRoundNum() % 35 == 0) {
+                if (Clock.getRoundNum() % 15 == 0) {
                     botList = new ArrayList<Integer>();
                 }
                 //sense nearby bots
@@ -199,13 +238,13 @@ public class RobotPlayer {
                     roc.broadcast(currWayBuckets[0][1], wayY);
                 }
                 if (Clock.getRoundNum() == 1500) {
-                    int wayX = (enemyHQLoc.x - roc.getLocation().x) *3 / 4 + roc.getLocation().x;
-                    int wayY = (enemyHQLoc.y - roc.getLocation().y) *3/ 4 + roc.getLocation().y;
+                    int wayX = (enemyHQLoc.x - roc.getLocation().x) * 3 / 4 + roc.getLocation().x;
+                    int wayY = (enemyHQLoc.y - roc.getLocation().y) * 3 / 4 + roc.getLocation().y;
                     System.out.println(wayX + ", " + wayY);
                     roc.broadcast(currWayBuckets[0][0], wayX);
                     roc.broadcast(currWayBuckets[0][1], wayY);
                 }
-                
+
             } catch (GameActionException e) {
                 System.out.println("Unexpected exception in execHQ");
                 e.printStackTrace();
@@ -218,25 +257,35 @@ public class RobotPlayer {
         MapLocation partner;  //once a robot is built by the beaver, it will be referenced here
         int[] origWayPoint = new int[2];
         RobotType toBuild = null;
+        int delayBucket = 0;  //if we encounter a buildDelay, this will store the message channel to get the build alert from
+        boolean buildDelay = false;
         try {
 
             if (firstMove) {
-                if (Clock.getRoundNum() <= 20) {
+
                     // we don't have to worry about pathfinding due to the building target is right next to us
-                    tryBuild(oppositeDirec(roc.getLocation().directionTo(roc.senseHQLocation())), RobotType.MINERFACTORY);
-                } else {
+//                    tryBuild(oppositeDirec(roc.getLocation().directionTo(roc.senseHQLocation())), RobotType.MINERFACTORY); 
+                {
                     firstMove = false;
                     flockNumber = roc.readBroadcast(beavFlockNum);
 
                     /*loop here to see if there is anything requested for build*/
                     for (buildingReq br : buildingReq.values()) {
-                        if ((roc.readBroadcast(br.reqLoc) == 1)) {
+                        int flag = roc.readBroadcast(br.reqLoc);
+                        if ((flag == 1 || flag == 2)) {
+                            //  System.out.println("I'm building a " + br.toString());
                             roc.broadcast(br.reqLoc, 0);
                             buildReq = true;
                             toBuild = br.type;
+                            if (flag == 2) {
+                                System.out.println("Builddelay true on " + br.type.toString());
+                                buildDelay = true;
+                                delayBucket = br.reqLoc;
+                            }
                             MapLocation locDirective = getBuildingRequestLoc(br.reqLoc);
                             waypoint[0] = locDirective.x;
                             waypoint[1] = locDirective.y;
+                            break; //let another robot get the next request
                         }
                     }
                 }
@@ -250,20 +299,21 @@ public class RobotPlayer {
         while (true) {
             try {
 
-//               System.out.println("Waypoint: " + waypoint[0] + ", " + waypoint[1]);
+                // System.out.println("Waypoint: " + waypoint[0] + ", " + waypoint[1]);
                 if (roc.isCoreReady()) {
                     if (!buildReq && !ferryReq) {
                         //we've arrived at location of waypoint, aka the beaver's building, so lets drop off
                         // a reasonable amount of supplies and go pick up more
                         //TODO: add a check here to determine the building type, along with a calculation
                         //for the journey back to get more supplies (we wouldn't want to waste any!)
-                        if (waypoint[0] == roc.getLocation().x && waypoint[1] == roc.getLocation().y
-                                || (roc.getLocation().distanceSquaredTo(new MapLocation(waypoint[0], waypoint[1])) < 15)) {
+                        if ((roc.getLocation().distanceSquaredTo(new MapLocation(waypoint[0], waypoint[1])) < 15)) {
+                        //    System.out.println("transfer proximity succeeded");
                             boolean successfulTransfer = false;
                             //determine if there exists a friendly building in range to pass supplies to
                             //this method call below could also be used to get more info, but im trying to keep computation
                             //somewhat down at the moment...
                             RobotInfo[] surroundingData = roc.senseNearbyRobots(15, roc.getTeam());
+                          //  System.out.println(Arrays.toString(surroundingData));
                             for (int i = 0; i < surroundingData.length; i++) {
                                 if (surroundingData[i].type == toBuild) //if the type is the same as the one we built
                                 //should add an ID check too               // not the best way, but if we're consistent, will be fine.. (or we need to be more clever)
@@ -282,20 +332,33 @@ public class RobotPlayer {
                                 ferryReq = true;
                             }
                         }
+
                         takeWaypointMove(waypoint);
 
                     } else if (buildReq) {
                         if (waypoint[0] == roc.getLocation().x && waypoint[1] == roc.getLocation().y) {
+                            System.out.println("At build location with buildDelay equal to " + buildDelay);
+                            while (buildDelay == true) {
+                                if (roc.isCoreReady()) {
+                                    roc.mine();
+                                }
+                                if (roc.readBroadcast(delayBucket) == 1) {
+                                    System.out.println("Im breaking out");
+                                    break;
+                                }
+                            }
+                            buildDelay = false;
                             tryBuild(Direction.NORTH, toBuild);
                             buildReq = false;
+                            continue;
                         }
+
                         takeWaypointMove(waypoint);
 
                     } else if (ferryReq) {
 
                         //check to see if at HQ, if so, get more supplies and reset waypoint
-                        if (waypoint[0] == roc.getLocation().x && waypoint[1] == roc.getLocation().y
-                                || (roc.getLocation().distanceSquaredTo(new MapLocation(waypoint[0], waypoint[1])) < 15)) {
+                        if ((roc.getLocation().distanceSquaredTo(new MapLocation(waypoint[0], waypoint[1])) < 15)) {
                             //spin at this location until we're automatically replenished
                             while (roc.getSupplyLevel() <= 10) {
                                 if (roc.isCoreReady()) {
@@ -303,12 +366,12 @@ public class RobotPlayer {
                                 }
                             }
                             ferryReq = false;
+
                             waypoint[0] = origWayPoint[0];
                             waypoint[1] = origWayPoint[1];
                             takeWaypointMove(waypoint);
+                            continue;
                         } else {
-                            waypoint[0] = roc.readBroadcast(currWayBuckets[flockNumber][0]);
-                            waypoint[1] = roc.readBroadcast(currWayBuckets[flockNumber][1]);
                             takeWaypointMove(waypoint);
                         }
 
@@ -327,9 +390,8 @@ public class RobotPlayer {
                 } //TODO once the pathfinding gets resolved, implement this method, for now though just yield
                 //                else if(surroundingsNotSensed) 
                 //                    publishSurroundings();  //TODO fix this, currently it just attacks within this method
-                else {
-                    roc.yield();
-                }
+
+                roc.yield();
 
             } catch (GameActionException e) {
                 System.out.println("Exception caught in pre-loop of execBeav");
@@ -399,8 +461,8 @@ public class RobotPlayer {
      * being called, it is implicitly stated that the request bit will be
      * changed to 1, implying that the building should be built.
      */
-    private static void requestBuilding(buildingReq type, MapLocation loc) throws GameActionException {
-        requestBuilding(type, loc.x, loc.y);
+    private static void requestBuilding(buildingReq type, MapLocation loc, boolean delay) throws GameActionException {
+        requestBuilding(type, loc.x, loc.y, delay);
     }
 
     /**
@@ -412,9 +474,16 @@ public class RobotPlayer {
      * @param int y: y location on the map to broadcast If this method is being
      * called, it is implicitly stated that the request bit will be changed to
      * 1, implying that the building should be built.
+     * @param boolean isDelay: this will signify if the building should be 'held
+     * off' until another one is complete, it will get signaled to one once the
+     * rsrcs are available
      */
-    private static void requestBuilding(buildingReq type, int x, int y) throws GameActionException {
-        roc.broadcast(type.reqLoc, 1);
+    private static void requestBuilding(buildingReq type, int x, int y, boolean isDelay) throws GameActionException {
+        if (isDelay) {
+            roc.broadcast(type.reqLoc, 2);
+        } else {
+            roc.broadcast(type.reqLoc, 1);
+        }
         roc.broadcast(type.reqLoc + 1, x);
         roc.broadcast(type.reqLoc + 2, y);
     }
@@ -576,24 +645,44 @@ public class RobotPlayer {
         facing=Direction.values()[(int)(rand.nextDouble()*8)];
         try{
             while(true){
+             //   roc.getLocation();
                 if(roc.senseOre(roc.getLocation())>1){
                     if(roc.isCoreReady()&&roc.canMine()){
                         roc.mine();
             }
                 }else{
-                    if(rand.nextDouble()>.5){
+                    if(rand.nextDouble()>.9){
                        facing=facing.rotateLeft();
-                    }else{
+                    }else if(rand.nextDouble()<.1){
                         facing=facing.rotateRight();
                     }
                     if(roc.senseTerrainTile(roc.getLocation().add(facing))!=TerrainTile.NORMAL){
+                        if(rand.nextDouble()>.5){
 			facing = facing.rotateLeft();
+                        }else{
+                            facing = facing.rotateRight();
+                        }
 		}
-                    if(roc.isCoreReady()&&roc.canMove(facing)){
+//                    if(roc.isCoreReady()&&roc.canMove(facing)){
+//                        int counter=0;
+//                        boolean done=true;
+//                        while( done==true){
+//                        if(roc.senseOre(roc.getLocation().add(facing))>1 || done==false){
+//			roc.move(facing);
+//                        }else{
+//                            facing=facing.rotateRight();
+//                            counter++;
+//                            if(counter==8){
+//                                done=false;
+//                            }
+//                        }
+//                    }
+//		}
+                 if(roc.isCoreReady()&&roc.canMove(facing)){
 			roc.move(facing);
-		}
-                    
+		} 
                 }
+                roc.yield();
         }
         } catch (Exception e) {
             e.printStackTrace();
@@ -614,11 +703,25 @@ public class RobotPlayer {
                     attackSomething();
                 }
 
+                waypointLoc = new MapLocation(waypoint[0], waypoint[1]);
+                
+                if(roc.getLocation().equals(waypointLoc)){
+                   
+                    if(Bug.right){
+                        roc.broadcast(wayAck[flockNumber], 1);
+                    } else {
+                        roc.broadcast(wayAck[flockNumber], -1);
+                    }
+                    
+                    
+                }
+                
                 if (roc.isCoreReady()) {
                     waypoint[0] = roc.readBroadcast(currWayBuckets[flockNumber][0]);
                     waypoint[1] = roc.readBroadcast(currWayBuckets[flockNumber][1]);
 
-                    takeNextMove(waypoint);
+                    MapLocation[] towers = roc.senseEnemyTowerLocations();
+                    takeFlockMove(waypoint, towers);
                 }
                 roc.yield();
             }
@@ -642,22 +745,60 @@ public class RobotPlayer {
                     waypoint[0] = roc.readBroadcast(currWayBuckets[flockNumber][0]);
                     waypoint[1] = roc.readBroadcast(currWayBuckets[flockNumber][1]);
 
-                    takeNextMove(waypoint);
+                    MapLocation[] towers = roc.senseEnemyTowerLocations();
+                    takeFlockMove(waypoint, towers);
                 }
+                roc.yield();
             }
         } catch (Exception e) {
             e.printStackTrace();
         }
     }
 
+    //TODO: need to figure out how to handle how many to make (need allotment message bucket I believe)
     private static void execMinerFact() {
-        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+        
+         ArrayList<Integer> botList;
+        botList = new ArrayList<Integer>();
+        if (firstMove) {
+
+            try {
+                //probably add some useful code here...
+                firstMove = false;
+
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        }
+        while (true) {
+            
+        try{
+//             if (needSpawn(roc.getType())) {
+              if(true) {   //this is just for testing, definitely need a better way to do this      
+                        if (roc.isCoreReady() && roc.getTeamOre() >= 60) //thoretically we are going to change this so that it is more deterministic
+                        //as opposed to random
+                        {
+                            trySpawn(directions[rand.nextInt(8)], RobotType.MINER);
+                        }
+        }
+        
+        }
+        catch (GameActionException e)
+        {
+            System.out.println("GameActionException in execMinerFact");
+            e.printStackTrace();
+        }
+        }
+        
     }
 
     private static void execBarracks() {
-
+        ArrayList<Integer> botList;
+        botList = new ArrayList<Integer>();
         if (firstMove) {
+
             try {
+
                 firstMove = false;
 
                 //broadcast first waypoint for flock 2
@@ -681,6 +822,21 @@ public class RobotPlayer {
         while (true) {
 
             try {
+                if (Clock.getRoundNum() % 25 == 0) {
+                    botList = new ArrayList<Integer>();
+                }
+                //sense nearby bots
+                RobotInfo[] bots = roc.senseNearbyRobots(15, roc.getTeam());
+                if (bots.length != 0) {
+                    for (int i = 0; i < bots.length; i++) {
+                        if (botList.contains(bots[i].ID) || bots[i].type == RobotType.BEAVER) {
+                            continue;
+                        }
+                        roc.transferSupplies(900, bots[i].location);
+                        botList.add(bots[i].ID);
+                    }
+                }
+
                 if (Clock.getRoundNum() == 1000) {
                     int wayX = (enemyHQLoc.x - roc.getLocation().x) * 2 / 3 + roc.getLocation().x;
                     int wayY = (enemyHQLoc.y - roc.getLocation().y) * 2 / 3 + roc.getLocation().y;
@@ -690,7 +846,7 @@ public class RobotPlayer {
                 }
 
                 if (needSpawn(roc.getType())) {
-                    if (iteration % 2 == 0) {
+                    if (barracksUnitIteration % 2 == 0) {
                         if (roc.isCoreReady() && roc.getTeamOre() >= 60) //thoretically we are going to change this so that it is more deterministic
                         //as opposed to random
                         {
@@ -703,7 +859,7 @@ public class RobotPlayer {
                             trySpawn(directions[rand.nextInt(8)], RobotType.BASHER);
                         }
                     }
-                    iteration++;
+                    barracksUnitIteration++;
                 }
             } catch (Exception e) {
 
@@ -801,10 +957,6 @@ public class RobotPlayer {
 
     static void attackSomething() throws GameActionException {
         RobotInfo[] enemies = roc.senseNearbyRobots(myRange, enemyTeam);
-//        System.out.println(roc.getType().toString());
-//        System.out.println(myRange);
-//        System.out.println(enemyTeam);
-        // System.out.println(enemies.toString());
         if (enemies.length > 0) {
             roc.attackLocation(enemies[0].location);
         }
@@ -830,33 +982,116 @@ public class RobotPlayer {
         int offsetIndex = 0;
         int[] offsets = {0, 1, -1, 2, -2, 3, -3, 4};
         int dirint = directionToInt(d);
+        while (roc.getTeamOre() < type.oreCost) {
+            if (roc.isCoreReady()) {
+                roc.mine();
+            }
+            //  System.out.println("murdering turn");
+            roc.yield();
+        }
+        // System.out.println("resurecting turn");
         while (offsetIndex < 8 && !roc.canMove(directions[(dirint + offsets[offsetIndex] + 8) % 8])) {
             offsetIndex++;
         }
         if (offsetIndex < 8) {
+            while (!roc.isCoreReady()) {
+                //spin because I can't think of a better way to handle this
+            }
             roc.build(directions[(dirint + offsets[offsetIndex] + 8) % 8], type);
         }
 
     }
 
-    static void takeNextMove(int[] waypoint) {
+    /**
+     *
+     * @param waypoint
+     * @param towers null if you don't want tower avoidacne
+     */
+    static void takeFlockMove(int[] waypoint, MapLocation[] towers) {
 
-        Direction next = Flock.computeMove(roc, waypoint);
-        boolean movePossible;
+        Direction next = Direction.OMNI;
+        boolean movePossible = true;
+
         try {
-            movePossible = roc.canMove(next);
-            if (!movePossible) {
-                next = intToDirection(rand.nextInt(8));
+
+            if (Bug.tracing) {  // if we're tracing, continue tracing
+                next = Bug.computeMove(roc, waypoint, next, towers);
+                Bug.flockStep++;
+            } else {    // otherwise try to flock, if failure start tracing
+                next = Flock.computeMove(roc, waypoint);
+                if (Bug.terrainTileState(roc, next, towers) > 0) {
+                    movePossible = false;
+                }
+
+                while (!movePossible) {  // if the next move can't be taken
+
+                    if (Bug.terrainTileState(roc, next, towers) == 1) {   // the tile is void or contains buildings
+                        Bug.tracing = true;
+                        next = Bug.computeMove(roc, waypoint, next, towers);
+                        Bug.flockStep++;
+                        movePossible = true;
+                    } else {    // the tile contains a robot
+                        next = intToDirection(rand.nextInt(8));
+                        if (Bug.terrainTileState(roc, next, towers) > 0) {
+                            movePossible = true;
+                        }
+                    }
+                }
+
             }
 
-            roc.move(next);
+
+            /*make sure no moves with none*/
+            if (next != Direction.NONE && next != Direction.OMNI && roc.canMove(next)) {
+                roc.move(next);
+            }
 
         } catch (Exception e) {
-
+            e.printStackTrace();
         }
 
     }
 
+//    static void takeFlockNoTowerMove(int[] waypoint) {
+//
+//        Direction next = Direction.OMNI;
+//        boolean movePossible = true;
+//        
+//        MapLocation[] towers = roc.senseEnemyTowerLocations();
+//
+//        try {
+//
+//            if (Bug.tracing) {  // if we're tracing, continue tracing
+//                next = Bug.computeMove(roc, waypoint, next, towers);
+//            } else {    // otherwise try to flock, if failure start tracing
+//                next = Flock.computeMove(roc, waypoint);
+//                if(Bug.terrainTileState(roc, next, towers) > 0){
+//                    movePossible = false;
+//                }
+//
+//                if (!movePossible) {  // if the next move can't be taken
+//
+//                    if (Bug.terrainTileState(roc, next, towers) == 1) {   // the tile is void or contains buildings or in tower range
+//                        Bug.tracing = true;
+//                        next = Bug.computeMove(roc, waypoint, next, towers);
+//                    } else {    // the tile contains a robot
+//                        next = intToDirection(rand.nextInt(8));
+//                    }
+//                }
+//
+//            }
+//
+//
+//            /*make sure no moves with none*/
+//            if (next != Direction.NONE && next != Direction.OMNI && roc.canMove(next)) {
+//                roc.move(next);
+//            } 
+//
+//        } catch (Exception e) {
+//            e.printStackTrace();
+//        }
+//
+//    }
     static void takeWaypointMove(int[] waypoint) {
         Direction next = Direction.OMNI;
         boolean movePossible;
@@ -864,16 +1099,16 @@ public class RobotPlayer {
         try {
 
             if (Bug.tracing) {  // if we're tracing, continue tracing
-                next = Bug.computeMove(roc, waypoint, next);
+                next = Bug.computeMove(roc, waypoint, next, null);
             } else {    // otherwise try to flock, if failure start tracing
                 next = Flock.computeWaypointMove(roc, waypoint);
                 movePossible = roc.canMove(next);
 
                 if (!movePossible) {  // if the next move can't be taken
 
-                    if (Bug.terrainTileState(roc, next) == 1) {   // the tile is void or contains buildings
+                    if (Bug.terrainTileState(roc, next, null) == 1) {   // the tile is void or contains buildings
                         Bug.tracing = true;
-                        next = Bug.computeMove(roc, waypoint, next);
+                        next = Bug.computeMove(roc, waypoint, next, null);
                     } else {    // the tile contains a robot
                         next = intToDirection(rand.nextInt(8));
                     }
@@ -885,8 +1120,6 @@ public class RobotPlayer {
             /*make sure no moves with none*/
             if (next != Direction.NONE && next != Direction.OMNI && roc.canMove(next)) {
                 roc.move(next);
-            } else {
-                roc.yield();
             }
 
         } catch (Exception e) {
