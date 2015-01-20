@@ -84,6 +84,7 @@ public class RobotPlayer {
         Direction.SOUTH_WEST, Direction.WEST, Direction.NORTH_WEST};
     static boolean firstMove = true;
     static int flockNumber = -1 ;
+    static Direction facing = null;
 
     public static void run(RobotController rc) {
         roc = rc;
@@ -639,8 +640,53 @@ public class RobotPlayer {
         }
     }
 
-    private static void execMiner() {
-        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+     private static void execMiner() {//nevin
+        facing=Direction.values()[(int)(rand.nextDouble()*8)];
+        try{
+            while(true){
+             //   roc.getLocation();
+                if(roc.senseOre(roc.getLocation())>1){
+                    if(roc.isCoreReady()&&roc.canMine()){
+                        roc.mine();
+            }
+                }else{
+                    if(rand.nextDouble()>.9){
+                       facing=facing.rotateLeft();
+                    }else if(rand.nextDouble()<.1){
+                        facing=facing.rotateRight();
+                    }
+                    if(roc.senseTerrainTile(roc.getLocation().add(facing))!=TerrainTile.NORMAL){
+                        if(rand.nextDouble()>.5){
+			facing = facing.rotateLeft();
+                        }else{
+                            facing = facing.rotateRight();
+                        }
+		}
+//                    if(roc.isCoreReady()&&roc.canMove(facing)){
+//                        int counter=0;
+//                        boolean done=true;
+//                        while( done==true){
+//                        if(roc.senseOre(roc.getLocation().add(facing))>1 || done==false){
+//			roc.move(facing);
+//                        }else{
+//                            facing=facing.rotateRight();
+//                            counter++;
+//                            if(counter==8){
+//                                done=false;
+//                            }
+//                        }
+//                    }
+//		}
+                 if(roc.isCoreReady()&&roc.canMove(facing)){
+			roc.move(facing);
+		} 
+                }
+                roc.yield();
+        }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        //To change body of generated methods, choose Tools | Templates.
     }
 
     private static void execSoldier() {
