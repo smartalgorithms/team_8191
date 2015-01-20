@@ -17,7 +17,7 @@ import java.util.Random;
 public class Bug {
 
     static boolean tracing = false; // true if we're currently tracing a wall
-    static boolean right = false;    // true if we're currently tracing using right hand rule
+    static boolean right = true;    // true if we're currently tracing using right hand rule
 
     static Direction previousDirection = null;  // last direction we took
 
