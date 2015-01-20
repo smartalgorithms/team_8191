@@ -17,7 +17,7 @@ import java.util.Random;
 public class Bug {
 
     static boolean tracing = false; // true if we're currently tracing a wall
-    static boolean right = true;    // true if we're currently tracing using right hand rule
+    static boolean right = false;    // true if we're currently tracing using right hand rule
 
     static Direction previousDirection = null;  // last direction we took
 
@@ -31,6 +31,7 @@ public class Bug {
 
     static final int flockThreshold = 50;      // If flocking, we step out of bug after this many turns
     static int flockStep = 0;
+    static int firstOptionNum = 0;     //number of times we have gone through the first statement in LH/RH rule cases
     /**
      * compute next move according to the right hand rule
      *
@@ -81,7 +82,7 @@ public class Bug {
         possibleLocation = rc.getLocation().add(possibleMove);
         int newDistanceSquared = possibleLocation.distanceSquaredTo(waypointLocation);
 
-        if (newDistanceSquared < minDistanceSquared || flockStep > flockThreshold ) {
+        if (newDistanceSquared < minDistanceSquared || flockStep > flockThreshold) {
 //        if (newDistanceSquared < minDistanceSquared) {
             System.out.println("Exited bug mode, distance to waypoint is " + newDistanceSquared);
             tracing = false;
@@ -89,10 +90,24 @@ public class Bug {
             minDistanceSquared = -1;
             minLocation = null;
             possibleLocation = null;
+            firstOptionNum = 0;
             flockStep = 0;
+            right = true;
+        } 
+        else if (firstOptionNum > 4){
+            possibleMove = RobotPlayer.intToDirection(RobotPlayer.rand.nextInt());
+            System.out.println("Exited bug mode after 8, distance to waypoint is " + newDistanceSquared);
+            tracing = false;
+            previousDirection = null;
+            minDistanceSquared = -1;
+            minLocation = null;
+            possibleLocation = null;
+            firstOptionNum = 0;
+            flockStep = 0;
+            right = true;
         }
 
-        minDistanceSquared = minDistanceSquared + 1;  // slowly make the min distance larger to escape long wall hugs
+//        minDistanceSquared = minDistanceSquared + 1;  // slowly make the min distance larger to escape long wall hugs
         return possibleMove;
     }
 
@@ -105,7 +120,7 @@ public class Bug {
         /*if forward is empty and right is empty, move right*/
 //        if (rc.canMove(previousDirection)) {
         if (terrainTileState(rc, previousDirection, towers) < 1) {
-
+            
             switch (previousDirection) {
                 case NORTH:
                     possibleMove = EAST;
@@ -142,13 +157,16 @@ public class Bug {
         if (!canMove) {
             possibleMove = previousDirection;
             if (terrainTileState(rc, possibleMove, towers) < 1) {
-
+                firstOptionNum = 0;
                 canMove = true;
             }
+        } else {
+            firstOptionNum++;
         }
 
         /* else if left is empty move left until we can move*/
         while (!canMove) {
+            firstOptionNum = 0;
             switch (possibleMove) {
                 case NORTH:
                 case NORTH_WEST:
@@ -233,13 +251,17 @@ public class Bug {
         if (!canMove) {
             possibleMove = previousDirection;
             if (terrainTileState(rc, possibleMove, towers) < 1) {
-
+                firstOptionNum = 0;
                 canMove = true;
             }
+        }  else {
+            firstOptionNum++;
         }
 
         /* else if left is empty move left until we can move*/
         while (!canMove) {
+            firstOptionNum = 0;
+            
             switch (possibleMove) {
                 case NORTH:
                 case NORTH_WEST:
