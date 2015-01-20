@@ -16,10 +16,10 @@ public class Flock {
 
     public static final int flocksize = 25;
 
-    public static final double alSepWeight = 1.7;
-    public static final double alCohWeight = 2.1;
-    public static final double axAttractWeight = 2.0;
-    public static final double wayAttractWeight = 1.0;
+    public static final double alSepWeight = 2.5;
+    public static final double alCohWeight = 2.9;
+    public static final double axAttractWeight = 1.5;
+    public static final double wayAttractWeight = 4.0;
 
     /* array of compass rose tangents*/
     /*tan(23.5, 67.5, 112.5, 157.5)*/
@@ -145,7 +145,7 @@ public class Flock {
 
         double[] aveDirVect = {0.0, 0.0};
 
-        int desiredSep = 1;
+        int desiredSep = 4;
 
         try {
             /*loop through all the bots and find average direction vector*/
@@ -157,7 +157,7 @@ public class Flock {
                 int xdif = nearbyAllies[i].location.x - botX;
                 int ydif = nearbyAllies[i].location.y - botY;
 
-                if ((xdif * xdif + ydif * ydif) > desiredSep) { // calculate new direction
+                if ((xdif * xdif + ydif * ydif) < desiredSep) { // calculate new direction
                     aveDirVect[0] += -xdif; //go opposite direction
                     aveDirVect[1] += -ydif;
                 }
@@ -185,7 +185,7 @@ public class Flock {
     public static double[] alliedCohesion(RobotController rc, RobotInfo[] nearbyAllies) {
         double[] aveDirVect = {0.0, 0.0};
 
-        int desiredSep = 2;
+        int desiredSep = 9;
 
         try {
             /*loop through all the bots and find average direction vector*/
