@@ -17,7 +17,7 @@ public class Flock {
     public static final int flocksize = 25;
 
     public static final double alSepWeight = 2.5;
-    public static final double alCohWeight = 2.9;
+    public static final double alCohWeight = 3.5;
     public static final double axAttractWeight = 1.5;
     public static final double wayAttractWeight = 4.0;
 
