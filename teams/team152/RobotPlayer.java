@@ -207,32 +207,33 @@ public class RobotPlayer {
                         numMiners++;
                     }
                 }
-                if (Clock.getRoundNum() == 200) {
-                    requestBuilding(buildingReq.Barracks, ((enemyHQLoc.x - roc.getLocation().x) / 6 + roc.getLocation().x), ((enemyHQLoc.y - roc.getLocation().y) / 4 + roc.getLocation().y), false);
-                    numBeavers--;
-                }
-                if (Clock.getRoundNum() == 150) {
-                    requestBuilding(buildingReq.SupplyDepot, roc.senseHQLocation().x + 6, roc.senseHQLocation().y + 4, false);
-                    numBeavers--;
-                }
-                if (Clock.getRoundNum() == 240) {
-                    requestBuilding(buildingReq.TankFactory, ((enemyHQLoc.x - roc.getLocation().x) / 7 + roc.getLocation().x),
-                            ((enemyHQLoc.y - roc.getLocation().y) / 5 + roc.getLocation().y), false);
-                    numBeavers--;
-                }
-                if (Clock.getRoundNum() == 260) {
-                    requestBuilding(buildingReq.TankFactory, ((enemyHQLoc.x - roc.getLocation().x) / 7 + roc.getLocation().x + 1),
-                            ((enemyHQLoc.y - roc.getLocation().y) / 5 + roc.getLocation().y), false);
-                    numBeavers--;
-                }
-                if (Clock.getRoundNum() == 280) {
-                    requestBuilding(buildingReq.TankFactory, ((enemyHQLoc.x - roc.getLocation().x) / 7 + roc.getLocation().x + 2),
-                            ((enemyHQLoc.y - roc.getLocation().y) / 5 + roc.getLocation().y), false);
+                
+                if (Clock.getRoundNum() == 75) {
+                    requestBuilding(buildingReq.Barracks, ((enemyHQLoc.x - roc.getLocation().x) / 6 + roc.getLocation().x), ((enemyHQLoc.y - roc.getLocation().y) / 6 + roc.getLocation().y), false);
                     numBeavers--;
                 }
                 if (Clock.getRoundNum() == 300) {
+                    requestBuilding(buildingReq.SupplyDepot, roc.senseHQLocation().x + 6, roc.senseHQLocation().y + 4, false);
+                    numBeavers--;
+                }
+                if (Clock.getRoundNum() == 140) {
+                    requestBuilding(buildingReq.TankFactory, ((enemyHQLoc.x - roc.getLocation().x) / 7 + roc.getLocation().x),
+                            ((enemyHQLoc.y - roc.getLocation().y) / 7 + roc.getLocation().y), false);
+                    numBeavers--;
+                }
+                if (Clock.getRoundNum() == 160) {
+                    requestBuilding(buildingReq.TankFactory, ((enemyHQLoc.x - roc.getLocation().x) / 7 + roc.getLocation().x + 1),
+                            ((enemyHQLoc.y - roc.getLocation().y) / 7 + roc.getLocation().y), false);
+                    numBeavers--;
+                }
+                if (Clock.getRoundNum() == 180) {
+                    requestBuilding(buildingReq.TankFactory, ((enemyHQLoc.x - roc.getLocation().x) / 7 + roc.getLocation().x + 2),
+                            ((enemyHQLoc.y - roc.getLocation().y) / 7 + roc.getLocation().y), false);
+                    numBeavers--;
+                }
+                if (Clock.getRoundNum() == 100) {
                     requestBuilding(buildingReq.TankFactory, ((enemyHQLoc.x - roc.getLocation().x) / 7 + roc.getLocation().x + 3),
-                            ((enemyHQLoc.y - roc.getLocation().y) / 5 + roc.getLocation().y), false);
+                            ((enemyHQLoc.y - roc.getLocation().y) / 7 + roc.getLocation().y), false);
                     numBeavers--;
                 }
                 if (Clock.getRoundNum() == 13) {
@@ -270,15 +271,22 @@ public class RobotPlayer {
                     int wayX = (enemyHQLoc.x - roc.getLocation().x) / 4 + roc.getLocation().x;
                     int wayY = (enemyHQLoc.y - roc.getLocation().y) / 4 + roc.getLocation().y;
                     System.out.println(wayX + ", " + wayY);
-                    roc.broadcast(currWayBuckets[0][0], wayX);
-                    roc.broadcast(currWayBuckets[0][1], wayY);
+                    roc.broadcast(currWayBuckets[1][0], wayX);
+                    roc.broadcast(currWayBuckets[1][1], wayY);
                 }
                 if (Clock.getRoundNum() == 1500) {
                     int wayX = (enemyHQLoc.x - roc.getLocation().x) * 3 / 4 + roc.getLocation().x;
                     int wayY = (enemyHQLoc.y - roc.getLocation().y) * 3 / 4 + roc.getLocation().y;
                     System.out.println(wayX + ", " + wayY);
-                    roc.broadcast(currWayBuckets[0][0], wayX);
-                    roc.broadcast(currWayBuckets[0][1], wayY);
+                    roc.broadcast(currWayBuckets[1][0], wayX);
+                    roc.broadcast(currWayBuckets[1][1], wayY);
+                }
+                if (Clock.getRoundNum() == 1750) {
+                    int wayX = enemyHQLoc.x;
+                    int wayY = enemyHQLoc.y;
+                    System.out.println(wayX + ", " + wayY);
+                    roc.broadcast(currWayBuckets[1][0], wayX);
+                    roc.broadcast(currWayBuckets[1][1], wayY);
                 }
 
                 roc.yield();
@@ -327,7 +335,7 @@ public class RobotPlayer {
                         waypoint[1] = locDirective.y;
                         break; //let another robot get the next request
                     }
-                     transferSupplies();
+                    transferSupplies();
                 }
 
             }
@@ -689,24 +697,24 @@ public class RobotPlayer {
         }
     }
 
-     private static void execMiner() {//nevin
-          ArrayList<Integer> botList;
+    private static void execMiner() {//nevin
+        ArrayList<Integer> botList;
         botList = new ArrayList<Integer>();
-        facing=Direction.values()[(int)(rand.nextDouble()*8)];
-        
-        try{
-            while(true){
-             //   roc.getLocation();
-                if(roc.senseOre(roc.getLocation())>2){
-                    if(roc.isCoreReady()&&roc.canMine()){
+        facing = Direction.values()[(int) (rand.nextDouble() * 8)];
+
+        try {
+            while (true) {
+                //   roc.getLocation();
+                if (roc.senseOre(roc.getLocation()) > 2) {
+                    if (roc.isCoreReady() && roc.canMine()) {
                         roc.mine();
-            }
-                  }else{
-                    if(rand.nextDouble()>.9){
-                       facing=facing.rotateLeft();
-                    }else if(rand.nextDouble()<.1){
-                        facing=facing.rotateRight();
                     }
+//                  }else{
+//                    if(rand.nextDouble()>.9){
+//                       facing=facing.rotateLeft();
+//                    }else if(rand.nextDouble()<.1){
+//                        facing=facing.rotateRight();
+//                    }
                 } else {
                     if (rand.nextDouble() > .9) {
                         facing = facing.rotateLeft();
@@ -754,7 +762,7 @@ public class RobotPlayer {
 //                    
 //                        }}
 //                }
-                   transferSupplies();
+                transferSupplies();
                 roc.yield();
             }
         } catch (Exception e) {
@@ -848,53 +856,50 @@ public class RobotPlayer {
 
             try {
 //             if (needSpawn(roc.getType())) {
-              if(true) {   //this is just for testing, definitely need a better way to do this      
-                        if (roc.isCoreReady() && roc.getTeamOre() <= 1000) //thoretically we are going to change this so that it is more deterministic
-                        //as opposed to random
-                        {
-                            trySpawn(directions[rand.nextInt(8)], RobotType.MINER);
-                        }
-        } 
-             // transferSupplies();
-              RobotInfo[] bots = roc.senseNearbyRobots(15, roc.getTeam());
+                if (true) {   //this is just for testing, definitely need a better way to do this      
+                    if (roc.isCoreReady() && roc.getTeamOre() <= 1000) //thoretically we are going to change this so that it is more deterministic
+                    //as opposed to random
+                    {
+                        trySpawn(directions[rand.nextInt(8)], RobotType.MINER);
+                    }
+                }
+                // transferSupplies();
+                RobotInfo[] bots = roc.senseNearbyRobots(15, roc.getTeam());
                 if (bots.length != 0) {
                     for (int i = 0; i < bots.length; i++) {
                         if (botList.contains(bots[i].ID)) {
                             continue;
                         }
-                        
+
                         roc.transferSupplies(5000, bots[i].location);
-                       // botList.add(bots[i].ID);
+                        // botList.add(bots[i].ID);
                     }
                 }
-        
+
+            } catch (GameActionException e) {
+                System.out.println("GameActionException in execMinerFact");
+                e.printStackTrace();
+            }
         }
-        catch (GameActionException e)
-        {
-            System.out.println("GameActionException in execMinerFact");
-            e.printStackTrace();
-        }
-        }
-        
+
     }
+
     private static void transferSupplies() throws GameActionException {
-		RobotInfo[] nearbyAllies = roc.senseNearbyRobots(roc.getLocation(),15,roc.getTeam());
-		double lowestSupply = roc.getSupplyLevel();
-		double transferAmount = 0;
-		MapLocation suppliesToThisLocation = null;
-		for(RobotInfo nAll:nearbyAllies){
-			if(nAll.supplyLevel<lowestSupply){
-				lowestSupply = nAll.supplyLevel;
-				transferAmount = (roc.getSupplyLevel()-nAll.supplyLevel)/2;
-				suppliesToThisLocation = nAll.location;
-			}
-		}
-		if(suppliesToThisLocation!=null){
-			roc.transferSupplies((int)transferAmount, suppliesToThisLocation);
-		}
-	}
-
-
+        RobotInfo[] nearbyAllies = roc.senseNearbyRobots(roc.getLocation(), 15, roc.getTeam());
+        double lowestSupply = roc.getSupplyLevel();
+        double transferAmount = 0;
+        MapLocation suppliesToThisLocation = null;
+        for (RobotInfo nAll : nearbyAllies) {
+            if (nAll.supplyLevel < lowestSupply) {
+                lowestSupply = nAll.supplyLevel;
+                transferAmount = (roc.getSupplyLevel() - nAll.supplyLevel) / 2;
+                suppliesToThisLocation = nAll.location;
+            }
+        }
+        if (suppliesToThisLocation != null) {
+            roc.transferSupplies((int) transferAmount, suppliesToThisLocation);
+        }
+    }
 
     private static void execBarracks() {
         ArrayList<Integer> botList;
@@ -1102,7 +1107,7 @@ public class RobotPlayer {
             }
 
             case HQ: {
-                if (roc.readBroadcast(58000) < 10) {
+                if (roc.readBroadcast(58000) < 3) {
                     return true;
                 } else {
                     return false;
