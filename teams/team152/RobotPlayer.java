@@ -8,6 +8,7 @@ package team152;
 import battlecode.common.*;
 import java.util.*;
 
+
 /**
  *
  * @author byrdie
@@ -118,6 +119,9 @@ public class RobotPlayer {
             case BARRACKS:
                 execBarracks();
                 break;
+            case HELIPAD:
+                execHelipad();
+                break;
             case COMMANDER:
                 execCommander();
             case TRAININGFIELD:
@@ -168,11 +172,12 @@ public class RobotPlayer {
                 requestBuilding(buildingReq.Barracks, friendlyTowers[0].x, friendlyTowers[0].y, true);
                 //TODO need a better way to determine where I can put this, I think error checking is just needed overall for placing a building
                 requestBuilding(buildingReq.MinerFactory, roc.senseHQLocation().x + 2, roc.senseHQLocation().y, false);
-
+                 
                 requestBuilding(buildingReq.SupplyDepot, roc.senseHQLocation().x + 4, roc.senseHQLocation().y, true);
 
                 requestBuilding(buildingReq.TankFactory, ((enemyHQLoc.x - roc.getLocation().x) / 5 + roc.getLocation().x),
                         ((enemyHQLoc.y - roc.getLocation().y) / 5 + roc.getLocation().y), true);
+                  requestBuilding(buildingReq.Helipad, roc.senseHQLocation().x - 2, roc.senseHQLocation().y, true);
 
             }
        
@@ -500,11 +505,18 @@ public class RobotPlayer {
                 System.out.println("Unexpected exception in execTower");
                 e.printStackTrace();
             }
+            roc.yield();
         }
     }
 
-    public static void execSupplyDepot() {
+    public static void execSupplyDepot()  {
         while (true) {
+            try {
+                transferSupplies();
+            } catch (GameActionException e) {
+               System.out.println("Unexpected exception in execTower");
+                e.printStackTrace();
+            }
 
         }
     }
@@ -1006,7 +1018,7 @@ public class RobotPlayer {
                         if (botList.contains(bots[i].ID) || bots[i].type == RobotType.BEAVER) {
                             continue;
                         }
-                        roc.transferSupplies(900, bots[i].location);
+                       
                         botList.add(bots[i].ID);
                     }
                 }
@@ -1063,6 +1075,41 @@ public class RobotPlayer {
         } catch (Exception e) {
             e.printStackTrace();
         }
+    }
+    
+    private static void execHelipad(){
+           ArrayList<Integer> botList;
+        botList = new ArrayList<Integer>();
+        if (firstMove) {
+
+            try {
+                //probably add some useful code here...
+                firstMove = false;
+
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        }
+        while (true) {
+
+            try {
+//             if (needSpawn(roc.getType())) {
+                if (true) {   //this is just for testing, definitely need a better way to do this      
+                    if (roc.isCoreReady() && roc.getTeamOre() <= 1000) //thoretically we are going to change this so that it is more deterministic
+                    //as opposed to random
+                    {
+                        trySpawn(directions[rand.nextInt(8)], RobotType.DRONE);
+                    }
+                }
+                // transferSupplies();
+               transferSupplies();
+
+            } catch (GameActionException e) {
+                System.out.println("GameActionException in execMinerFact");
+                e.printStackTrace();
+            }
+        }
+
     }
 
     private static void execTrainingField() {
