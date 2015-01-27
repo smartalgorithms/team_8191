@@ -175,7 +175,7 @@ public class RobotPlayer {
                         ((enemyHQLoc.y - roc.getLocation().y) / 5 + roc.getLocation().y), true);
 
             }
-            transferSupplies();
+       
 
         } catch (GameActionException e) {
             System.out.println("exception in execHQ - pre infinite loop");
@@ -288,14 +288,16 @@ public class RobotPlayer {
                     roc.broadcast(currWayBuckets[1][0], wayX);
                     roc.broadcast(currWayBuckets[1][1], wayY);
                 }
-
+                 transferSupplies();
                 roc.yield();
+                
 
             } catch (GameActionException e) {
                 System.out.println("Unexpected exception in execHQ");
                 e.printStackTrace();
                 continue;
             }
+                
         }
     }
 
@@ -335,10 +337,11 @@ public class RobotPlayer {
                         waypoint[1] = locDirective.y;
                         break; //let another robot get the next request
                     }
-                    transferSupplies();
+                   
                 }
 
             }
+             
             modSize = roc.readBroadcast(1);
         } catch (GameActionException e) {
             System.out.println("Exception caught in pre-loop of execBeav");
@@ -439,7 +442,7 @@ public class RobotPlayer {
                 } //TODO once the pathfinding gets resolved, implement this method, for now though just yield
                 //                else if(surroundingsNotSensed) 
                 //                    publishSurroundings();  //TODO fix this, currently it just attacks within this method
-
+                transferSupplies();
                 roc.yield();
 
             } catch (GameActionException e) {
@@ -491,6 +494,8 @@ public class RobotPlayer {
                         attackSomething();
                     }
                 }
+                            transferSupplies();
+
             } catch (GameActionException e) {
                 System.out.println("Unexpected exception in execTower");
                 e.printStackTrace();
@@ -864,17 +869,7 @@ public class RobotPlayer {
                     }
                 }
                 // transferSupplies();
-                RobotInfo[] bots = roc.senseNearbyRobots(15, roc.getTeam());
-                if (bots.length != 0) {
-                    for (int i = 0; i < bots.length; i++) {
-                        if (botList.contains(bots[i].ID)) {
-                            continue;
-                        }
-
-                        roc.transferSupplies(5000, bots[i].location);
-                        // botList.add(bots[i].ID);
-                    }
-                }
+               transferSupplies();
 
             } catch (GameActionException e) {
                 System.out.println("GameActionException in execMinerFact");
@@ -918,6 +913,8 @@ public class RobotPlayer {
                 roc.broadcast(currWayBuckets[1][1], wayY);
                 roc.broadcast(soldierFlockNum, 1);  //assign new soldiers to flock 1
                 roc.broadcast(basherFlockNum, 1);  //assign new soldiers to flock 1
+                            
+
 
             } catch (Exception e) {
                 e.printStackTrace();
@@ -974,7 +971,7 @@ public class RobotPlayer {
 //                        }
 //                    }
 //                    barracksUnitIteration++;
-                }
+                }transferSupplies();
             } catch (Exception e) {
 
             }
@@ -1021,7 +1018,7 @@ public class RobotPlayer {
                         trySpawn(directions[rand.nextInt(8)], RobotType.TANK);
                     }
 
-                }
+                }transferSupplies();
             } catch (Exception e) {
                 e.printStackTrace();
             }
@@ -1061,6 +1058,7 @@ public class RobotPlayer {
                     takeFlockMove(waypoint, null);
                 }
                 roc.yield();
+                transferSupplies();
             }
         } catch (Exception e) {
             e.printStackTrace();
