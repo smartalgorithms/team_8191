@@ -217,23 +217,23 @@ public class RobotPlayer {
                     numBeavers--;
                 }
                 if (Clock.getRoundNum() == 140) {
-                    requestBuilding(buildingReq.TankFactory, ((enemyHQLoc.x - roc.getLocation().x) / 7 + roc.getLocation().x),
-                            ((enemyHQLoc.y - roc.getLocation().y) / 7 + roc.getLocation().y), false);
+                    requestBuilding(buildingReq.TankFactory, ((enemyHQLoc.x - roc.getLocation().x) / 5 + roc.getLocation().x),
+                            ((enemyHQLoc.y - roc.getLocation().y) / 5 + roc.getLocation().y), false);
                     numBeavers--;
                 }
                 if (Clock.getRoundNum() == 160) {
-                    requestBuilding(buildingReq.TankFactory, ((enemyHQLoc.x - roc.getLocation().x) / 7 + roc.getLocation().x + 1),
-                            ((enemyHQLoc.y - roc.getLocation().y) / 7 + roc.getLocation().y), false);
+                    requestBuilding(buildingReq.TankFactory, ((enemyHQLoc.x - roc.getLocation().x) / 5 + roc.getLocation().x + 2),
+                            ((enemyHQLoc.y - roc.getLocation().y) / 5 + roc.getLocation().y), false);
                     numBeavers--;
                 }
                 if (Clock.getRoundNum() == 180) {
-                    requestBuilding(buildingReq.TankFactory, ((enemyHQLoc.x - roc.getLocation().x) / 7 + roc.getLocation().x + 2),
-                            ((enemyHQLoc.y - roc.getLocation().y) / 7 + roc.getLocation().y), false);
+                    requestBuilding(buildingReq.TankFactory, ((enemyHQLoc.x - roc.getLocation().x) / 5 + roc.getLocation().x + 4),
+                            ((enemyHQLoc.y - roc.getLocation().y) / 5 + roc.getLocation().y), false);
                     numBeavers--;
                 }
                 if (Clock.getRoundNum() == 100) {
-                    requestBuilding(buildingReq.TankFactory, ((enemyHQLoc.x - roc.getLocation().x) / 7 + roc.getLocation().x + 3),
-                            ((enemyHQLoc.y - roc.getLocation().y) / 7 + roc.getLocation().y), false);
+                    requestBuilding(buildingReq.TankFactory, ((enemyHQLoc.x - roc.getLocation().x) / 5 + roc.getLocation().x + 6),
+                            ((enemyHQLoc.y - roc.getLocation().y) / 5 + roc.getLocation().y), false);
                     numBeavers--;
                 }
                 if (Clock.getRoundNum() == 13) {
@@ -1107,7 +1107,7 @@ public class RobotPlayer {
             }
 
             case HQ: {
-                if (roc.readBroadcast(58000) < 3) {
+                if (numBeavers < 2) {
                     return true;
                 } else {
                     return false;
