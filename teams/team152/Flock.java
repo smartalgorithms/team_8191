@@ -18,8 +18,9 @@ public class Flock {
 
     public static final double alSepWeight = 2.5;
     public static final double alCohWeight = 3.0;
-    public static final double axAttractWeight = 1.5;
+    public static final double axAttractWeight = 2.2;
     public static final double wayAttractWeight = 4.0;
+    public static final double towerAttractWeight = 3.0;
 
     /* array of compass rose tangents*/
     /*tan(23.5, 67.5, 112.5, 157.5)*/
@@ -37,6 +38,7 @@ public class Flock {
         double[] alliedSep = alliedSeparation(rc, nearbyAllies);   //Separation from allies
         double[] alliedCoh = alliedCohesion(rc, nearbyAllies);     // Cohesion to allies
         double[] enemyAttract = enemyAttraction(rc, nearbyEnemies);      // Attraction to enemies
+        double[] enemyTowerAttract = enemyTowerAttraction(rc);      // Attraction to enemies
         double[] wayAttract = waypointAttraction(rc, waypoint);    //Waypoint attraction
 
         // apply weights to each acceleration
@@ -46,6 +48,9 @@ public class Flock {
         alliedCoh[0] = alCohWeight * alliedCoh[0];
         alliedCoh[1] = alCohWeight * alliedCoh[1];
 
+        enemyTowerAttract[0] = towerAttractWeight * enemyTowerAttract[0];
+        enemyTowerAttract[1] = towerAttractWeight * enemyTowerAttract[1];
+        
         enemyAttract[0] = axAttractWeight * enemyAttract[0];
         enemyAttract[1] = axAttractWeight * enemyAttract[1];
 
@@ -55,8 +60,8 @@ public class Flock {
         /* calculate total acceleration from all terms */
 //        accel[0] = alliedCoh[0] + enemyAttract[0] + wayAttract[0];
 //        accel[1] = alliedCoh[1] + enemyAttract[1] + wayAttract[1];
-        accel[0] = alliedSep[0] + alliedCoh[0] + enemyAttract[0] + wayAttract[0];
-        accel[1] = alliedSep[1] + alliedCoh[1] + enemyAttract[1] + wayAttract[1];
+        accel[0] = alliedSep[0] + alliedCoh[0] + enemyAttract[0] + wayAttract[0] + enemyTowerAttract[0];
+        accel[1] = alliedSep[1] + alliedCoh[1] + enemyAttract[1] + wayAttract[1] + enemyTowerAttract[1];
 //        accel[0] = wayAttract[0];
 //        accel[1] = wayAttract[1];
 //        System.out.println(accel[0] + ", " + accel[1]);
@@ -236,6 +241,49 @@ public class Flock {
                 for (int i = size - 1; i >= 0; i--) {
                     int xdif = nearbyEnemies[i].location.x - botX;
                     int ydif = nearbyEnemies[i].location.y - botY;
+
+                    if ((xdif * xdif + ydif * ydif) > desiredSep) { // calculate new direction
+                        aveDirVect[0] += xdif; //go towards
+                        aveDirVect[1] += ydif;
+                    }
+
+                }
+            }
+
+            //normalize
+            double mag = Math.sqrt(aveDirVect[0] * aveDirVect[0] + aveDirVect[1] * aveDirVect[1]);
+
+            if (mag != 0.0) {
+                aveDirVect[0] = aveDirVect[0] / mag;
+                aveDirVect[1] = aveDirVect[1] / mag;
+            }
+
+//            System.out.println(aveDirVect[0] + ", " + aveDirVect[1]);
+        } catch (Exception e) {
+            System.out.println("There was an exeption in enemy attraction calculation");
+            e.printStackTrace();
+        }
+
+        return aveDirVect;
+    }
+    
+    /*returns vector to make sure flock attacks when necessary*/
+    public static double[] enemyTowerAttraction(RobotController rc) {
+        double[] aveDirVect = {0.0, 0.0};
+        MapLocation[] towers = rc.senseEnemyTowerLocations();
+        
+        int desiredSep = rc.getType().attackRadiusSquared;
+
+        try {
+            /*loop through all the bots and find average direction vector*/
+            int size = towers.length;
+            MapLocation botLoc = rc.getLocation();
+            int botX = botLoc.x;
+            int botY = botLoc.y;
+            if (size != 0) {
+                for (int i = size - 1; i >= 0; i--) {
+                    int xdif = towers[i].x - botX;
+                    int ydif = towers[i].y - botY;
 
                     if ((xdif * xdif + ydif * ydif) > desiredSep) { // calculate new direction
                         aveDirVect[0] += xdif; //go towards
