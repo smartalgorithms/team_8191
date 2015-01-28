@@ -19,7 +19,7 @@ public class Flock {
     public static final double alSepWeight = 2.5;
     public static final double alCohWeight = 3.0;
     public static final double axAttractWeight = 2.2;
-    public static final double wayAttractWeight = 4.0;
+    public static final double wayAttractWeight = 4.5;
     public static final double towerAttractWeight = 3.0;
 
     /* array of compass rose tangents*/

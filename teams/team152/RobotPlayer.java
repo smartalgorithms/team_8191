@@ -8,8 +8,6 @@ package team152;
 import battlecode.common.*;
 import java.util.*;
 
-
-
 /**
  *
  * @author byrdie
@@ -185,7 +183,7 @@ public class RobotPlayer {
                 MapLocation buildLocation;
                 buildLocation = getTowerBuildLocation();
 
-                wayX = buildLocation.x;
+                wayX = -(enemyHQLoc.x - buildLocation.x) / 6 + buildLocation.x;
                 wayY = (enemyHQLoc.y - buildLocation.y) / 6 + buildLocation.y;
                 System.out.println(wayX + ", " + wayY);
                 roc.broadcast(currWayBuckets[2][0], wayX);
@@ -195,7 +193,7 @@ public class RobotPlayer {
 //                requestBuilding(buildingReq.Barracks, friendlyTowers[0].x, friendlyTowers[0].y, true);
                 //TODO need a better way to determine where I can put this, I think error checking is just needed overall for placing a building
                 requestBuilding(buildingReq.MinerFactory, roc.senseHQLocation().x + 2, roc.senseHQLocation().y, false);
-                 
+
                 requestBuilding(buildingReq.SupplyDepot, roc.senseHQLocation().x + 4, roc.senseHQLocation().y, true);
 //
 //                requestBuilding(buildingReq.TankFactory, ((enemyHQLoc.x - roc.getLocation().x) / 5 + roc.getLocation().x),
@@ -210,7 +208,6 @@ public class RobotPlayer {
         while (true) {
             try {
                 transferSupplies();
-                 
 
                 //this is a little hacky, but i think it could be the start of 
                 //pre-game data
@@ -242,14 +239,14 @@ public class RobotPlayer {
 //                    requestBuilding(buildingReq.Barracks, ((enemyHQLoc.x - roc.getLocation().x) / 6 + roc.getLocation().x), ((enemyHQLoc.y - roc.getLocation().y) / 6 + roc.getLocation().y), false);
                     requestBuilding(buildingReq.Barracks, buildLocation.x, buildLocation.y, false);
                     numBeavers--;
-                    
+
                 }
                 if (Clock.getRoundNum() == 300) {
                     requestBuilding(buildingReq.SupplyDepot, roc.senseHQLocation().x + 6, roc.senseHQLocation().y + 2, false);
                     numBeavers--;
-                     requestBuilding(buildingReq.Helipad,((enemyHQLoc.x - roc.getLocation().x) / 10 + roc.getLocation().x),
-                            ((enemyHQLoc.y - roc.getLocation().y) / 10+ roc.getLocation().y) , false);
-                     numBeavers--;
+                    requestBuilding(buildingReq.Helipad, ((enemyHQLoc.x - roc.getLocation().x) / 10 + roc.getLocation().x),
+                            ((enemyHQLoc.y - roc.getLocation().y) / 10 + roc.getLocation().y), false);
+                    numBeavers--;
                 }
                 if (Clock.getRoundNum() == 200) {
 //                    requestBuilding(buildingReq.TankFactory, ((enemyHQLoc.x - roc.getLocation().x) / 5 + roc.getLocation().x),
@@ -269,12 +266,12 @@ public class RobotPlayer {
                     requestBuilding(buildingReq.TankFactory, buildLocation.x, buildLocation.y, false);
                     numBeavers--;
                 }
-//                if (Clock.getRoundNum() == 260) {
-////                    requestBuilding(buildingReq.TankFactory, ((enemyHQLoc.x - roc.getLocation().x) / 5 + roc.getLocation().x + 6),
-////                            ((enemyHQLoc.y - roc.getLocation().y) / 5 + roc.getLocation().y), false);
-//                    requestBuilding(buildingReq.TankFactory, buildLocation.x, buildLocation.y, false);
-//                    numBeavers--;
-//                }
+                if (Clock.getRoundNum() == 260) {
+//                    requestBuilding(buildingReq.TankFactory, ((enemyHQLoc.x - roc.getLocation().x) / 5 + roc.getLocation().x + 6),
+//                            ((enemyHQLoc.y - roc.getLocation().y) / 5 + roc.getLocation().y), false);
+                    requestBuilding(buildingReq.TankFactory, buildLocation.x, buildLocation.y, false);
+                    numBeavers--;
+                }
                 if (Clock.getRoundNum() == 13) {
                     ordertTowerPQ();
                 }
@@ -460,7 +457,7 @@ public class RobotPlayer {
 
         while (true) {
             try {
-                  
+
                 System.out.println("Waypoint: " + waypoint[0] + ", " + waypoint[1]);
                 if (roc.isCoreReady()) {
                     if (!buildReq && !ferryReq) {
@@ -553,7 +550,7 @@ public class RobotPlayer {
                 } //TODO once the pathfinding gets resolved, implement this method, for now though just yield
                 //                else if(surroundingsNotSensed) 
                 //                    publishSurroundings();  //TODO fix this, currently it just attacks within this method
-               transferSupplies();
+                transferSupplies();
                 roc.yield();
 
             } catch (GameActionException e) {
@@ -623,22 +620,23 @@ public class RobotPlayer {
         }
     }
 
-    public static void execSupplyDepot()  {
+    public static void execSupplyDepot() {
         while (true) {
             try {
                 transferSupplies();
-               
+
                 roc.yield();
             } catch (GameActionException e) {
-               System.out.println("Unexpected exception in execTower");
+                System.out.println("Unexpected exception in execTower");
                 e.printStackTrace();
             }
 
-        while (true) {
-            try {
-                transferSupplies();
-            } catch (GameActionException e) {
-                e.printStackTrace();
+            while (true) {
+                try {
+                    transferSupplies();
+                } catch (GameActionException e) {
+                    e.printStackTrace();
+                }
             }
         }
     }
@@ -843,7 +841,7 @@ public class RobotPlayer {
 
         try {
             while (true) {
-                 if (roc.isWeaponReady()) {
+                if (roc.isWeaponReady()) {
                     attackSomething();
                 }
                 //   roc.getLocation();
@@ -858,7 +856,7 @@ public class RobotPlayer {
 //                        facing=facing.rotateRight();
 //                    }
                 } else {
-                       
+
                     if (rand.nextDouble() > .9) {
                         facing = facing.rotateLeft();
                     } else if (rand.nextDouble() < .1) {
@@ -905,7 +903,7 @@ public class RobotPlayer {
 //                    
 //                        }}
 //                }
-                if (roc.getHealth() < roc.getType().maxHealth && healthFlag) {
+                if (roc.getHealth() < roc.getType().maxHealth / 2 && healthFlag) {
                     int num = roc.readBroadcast(58004);
                     roc.broadcast(58004, num - 1);
                     healthFlag = false;
@@ -931,7 +929,7 @@ public class RobotPlayer {
                 if (roc.isWeaponReady()) {
                     attackSomething();
                 }
-                 transferSupplies();
+                transferSupplies();
 
                 waypointLoc = new MapLocation(waypoint[0], waypoint[1]);
 
@@ -952,7 +950,7 @@ public class RobotPlayer {
                     MapLocation[] towers = roc.senseEnemyTowerLocations();
                     takeFlockMove(waypoint, towers);
                 }
-               
+
                 roc.yield();
             }
         } catch (Exception e) {
@@ -970,7 +968,7 @@ public class RobotPlayer {
             }
 
             while (true) {
-                  
+
                 if (roc.isCoreReady()) {
                     waypoint[0] = roc.readBroadcast(currWayBuckets[flockNumber][0]);
                     waypoint[1] = roc.readBroadcast(currWayBuckets[flockNumber][1]);
@@ -1040,45 +1038,45 @@ public class RobotPlayer {
     }
 
     private static void transferSupplies() throws GameActionException {
-      
+
         RobotInfo[] nearbyAllies = roc.senseNearbyRobots(roc.getLocation(), 15, roc.getTeam());
         double lowestSupply = roc.getSupplyLevel();
         double transferAmount = 0;
         MapLocation suppliesToThisLocation = null;
-        
-       if(roc.getType()!=RobotType.DRONE){
-        for (RobotInfo nAll : nearbyAllies) {
-            if (nAll.supplyLevel < lowestSupply) {
-                lowestSupply = nAll.supplyLevel;
-                transferAmount = (roc.getSupplyLevel() - nAll.supplyLevel) / 2;
-                suppliesToThisLocation = nAll.location;
-               
-              }
-              if (suppliesToThisLocation != null&& roc.senseRobotAtLocation(nAll.location)!=null) {
-            roc.transferSupplies((int) transferAmount, suppliesToThisLocation);
-            break;
-        
-              }
-           
-            }}else{
-           for (RobotInfo nAll : nearbyAllies) {
-            if (nAll.supplyLevel < lowestSupply) {
-                lowestSupply = nAll.supplyLevel;
-                transferAmount = roc.getSupplyLevel()  / 2;
-                suppliesToThisLocation = nAll.location;
-               
-              }
-              if (suppliesToThisLocation != null&& roc.senseRobotAtLocation(nAll.location)!=null && (roc.senseRobotAtLocation(nAll.location).type==RobotType.SOLDIER || roc.senseRobotAtLocation(nAll.location).type==RobotType.TANK)) {
-            roc.transferSupplies((int) transferAmount, suppliesToThisLocation);
-            break;
-        
-              }
-                 
-       }
-        
-         
-       }
-      
+
+        if (roc.getType() != RobotType.DRONE) {
+            for (RobotInfo nAll : nearbyAllies) {
+                if (nAll.supplyLevel < lowestSupply) {
+                    lowestSupply = nAll.supplyLevel;
+                    transferAmount = (roc.getSupplyLevel() - nAll.supplyLevel) / 2;
+                    suppliesToThisLocation = nAll.location;
+
+                }
+                if (suppliesToThisLocation != null && roc.senseRobotAtLocation(nAll.location) != null) {
+                    roc.transferSupplies((int) transferAmount, suppliesToThisLocation);
+                    break;
+
+                }
+
+            }
+        } else {
+            for (RobotInfo nAll : nearbyAllies) {
+                if (nAll.supplyLevel < lowestSupply) {
+                    lowestSupply = nAll.supplyLevel;
+                    transferAmount = roc.getSupplyLevel() / 2;
+                    suppliesToThisLocation = nAll.location;
+
+                }
+                if (suppliesToThisLocation != null && roc.senseRobotAtLocation(nAll.location) != null && (roc.senseRobotAtLocation(nAll.location).type == RobotType.SOLDIER || roc.senseRobotAtLocation(nAll.location).type == RobotType.TANK)) {
+                    roc.transferSupplies((int) transferAmount, suppliesToThisLocation);
+                    break;
+
+                }
+
+            }
+
+        }
+
     }
 
     private static void execBarracks() {
@@ -1168,7 +1166,7 @@ public class RobotPlayer {
                         if (botList.contains(bots[i].ID) || bots[i].type == RobotType.BEAVER) {
                             continue;
                         }
-                       
+
                         botList.add(bots[i].ID);
                     }
                 }
@@ -1215,7 +1213,7 @@ public class RobotPlayer {
                 if (roc.isWeaponReady()) {
                     attackSomething();
                 }
-              //   transferSupplies();
+                //   transferSupplies();
 
                 waypointLoc = new MapLocation(waypoint[0], waypoint[1]);
 
@@ -1242,16 +1240,16 @@ public class RobotPlayer {
             }
         }
     }
-    
-    private static void execHelipad(){
-           ArrayList<Integer> botList;
+
+    private static void execHelipad() {
+        ArrayList<Integer> botList;
         botList = new ArrayList<Integer>();
         if (firstMove) {
 
             try {
                 //probably add some useful code here...
                 firstMove = false;
-              roc.yield();
+                roc.yield();
             } catch (Exception e) {
                 e.printStackTrace();
             }
@@ -1260,17 +1258,18 @@ public class RobotPlayer {
 
             try {
 //             if (needSpawn(roc.getType())) {
-                if(Clock.getRoundNum()<1200){
-                if (true) {   //this is just for testing, definitely need a better way to do this      
-                    if (roc.isCoreReady() && roc.getTeamOre() <= 1000) //thoretically we are going to change this so that it is more deterministic
-                    //as opposed to random
-                    {
-                        trySpawn(directions[rand.nextInt(8)], RobotType.DRONE);
+                if (Clock.getRoundNum() < 1200) {
+                    if (true) {   //this is just for testing, definitely need a better way to do this      
+                        if (roc.isCoreReady() && roc.getTeamOre() > 510) //thoretically we are going to change this so that it is more deterministic
+                        //as opposed to random
+                        {
+                            trySpawn(directions[rand.nextInt(8)], RobotType.DRONE);
+                        }
                     }
-                }}
+                }
                 // transferSupplies();
-               transferSupplies();
-            roc.yield();
+                transferSupplies();
+                roc.yield();
             } catch (GameActionException e) {
                 System.out.println("GameActionException in execMinerFact");
                 e.printStackTrace();
@@ -1278,23 +1277,23 @@ public class RobotPlayer {
         }
 
     }
-    private static void execDrone(){
-           
-            if (firstMove) {
-                try {
-                    firstMove = false;
-                    flockNumber = roc.readBroadcast(soldierFlockNum);
-                } catch (Exception e) {
-                     e.printStackTrace();
-                }
-            }
 
-            while (true) {
-                try{
+    private static void execDrone() {
+
+        if (firstMove) {
+            try {
+                firstMove = false;
+                flockNumber = roc.readBroadcast(soldierFlockNum);
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        }
+
+        while (true) {
+            try {
                 if (roc.isWeaponReady()) {
                     attackSomething();
                 }
-               
 
 //                waypointLoc = new MapLocation(waypoint[0], waypoint[1]);
 //
@@ -1308,39 +1307,36 @@ public class RobotPlayer {
 //
 //                }
 //
-               
-             if (roc.isCoreReady()) {
-                 if(roc.getSupplyLevel()>3000|| Clock.getRoundNum() >1500 ){
-                    
-                    waypoint[0] = roc.readBroadcast(currWayBuckets[flockNumber][0]);
-                    waypoint[1] = roc.readBroadcast(currWayBuckets[flockNumber][1]);
+                if (roc.isCoreReady()) {
+                    if (roc.getSupplyLevel() > 3000 || Clock.getRoundNum() > 1500) {
 
-                   takeFlockMove(waypoint, null);
-                    transferSupplies();
-                   
-                 }else if(roc.getSupplyLevel()<500){
-                     waypoint[0]=roc.senseHQLocation().x;
-                      waypoint[1]=roc.senseHQLocation().y;
-                     takeFlockMove(waypoint, null);
-                     
-                 }else{
-                      waypoint[0] = roc.readBroadcast(currWayBuckets[flockNumber][0]);
-                    waypoint[1] = roc.readBroadcast(currWayBuckets[flockNumber][1]);
+                        waypoint[0] = roc.readBroadcast(currWayBuckets[flockNumber][0]);
+                        waypoint[1] = roc.readBroadcast(currWayBuckets[flockNumber][1]);
 
-                   takeFlockMove(waypoint, null);
-                     
-                 }
-               }
-              
-                
-                
+                        takeFlockMove(waypoint, null);
+                        transferSupplies();
+
+                    } else if (roc.getSupplyLevel() < 500) {
+                        waypoint[0] = roc.senseHQLocation().x;
+                        waypoint[1] = roc.senseHQLocation().y;
+                        takeWaypointMove(waypoint);
+
+                    } else {
+                        waypoint[0] = roc.readBroadcast(currWayBuckets[flockNumber][0]);
+                        waypoint[1] = roc.readBroadcast(currWayBuckets[flockNumber][1]);
+
+                        takeWaypointMove(waypoint);
+
+                    }
+                }
+
                 roc.yield();
-                 } catch (Exception e) {
-            e.printStackTrace();
-        }
-                
+            } catch (Exception e) {
+                e.printStackTrace();
             }
-       
+
+        }
+
     }
 
     private static void execTrainingField() {
@@ -1565,7 +1561,7 @@ public class RobotPlayer {
 
 
             /*make sure no moves with none*/
-            if (next != Direction.NONE && next != Direction.OMNI && roc.canMove(next)&&roc.isCoreReady()) {
+            if (next != Direction.NONE && next != Direction.OMNI && roc.canMove(next) && roc.isCoreReady()) {
                 roc.move(next);
             }
 
@@ -1582,7 +1578,7 @@ public class RobotPlayer {
 
         int size = towers.length;
         for (int i = 0; i < size; i++) {
-            double weight = Math.sqrt(10 * towers[i].distanceSquaredTo(roc.senseHQLocation()) +  towers[i].distanceSquaredTo(roc.senseEnemyHQLocation()));
+            double weight = Math.sqrt(10 * towers[i].distanceSquaredTo(roc.senseHQLocation()) + towers[i].distanceSquaredTo(roc.senseEnemyHQLocation()));
             if (weight < distance) {
                 buildTower = towers[i];
                 distance = weight;
@@ -1598,7 +1594,7 @@ public class RobotPlayer {
             buildLocation[0] = (roc.senseHQLocation().x - buildTower.x) / 4 + buildTower.x + rand.nextInt(2 * radius) - radius;
             buildLocation[1] = (roc.senseHQLocation().y - buildTower.y) / 4 + buildTower.y + rand.nextInt(2 * radius) - radius;
             location = new MapLocation(buildLocation[0], buildLocation[1]);
-            
+
             if (location.distanceSquaredTo(buildTower) < RobotType.TOWER.sensorRadiusSquared) {
                 if (roc.senseTerrainTile(location) == TerrainTile.NORMAL && !roc.isLocationOccupied(location)) {
                     return location;
@@ -1612,19 +1608,22 @@ public class RobotPlayer {
     public static MapLocation getClosestEnemyTower() {
         MapLocation[] tower = roc.senseEnemyTowerLocations();
         int distanceSquared = 1000000000;
-        int closeTower = -1;
+        int closeTower = 0;
+        if (tower != null) {
+            int size = tower.length;
 
-        int size = tower.length;
-
-        for (int i = 0; i < size; i++) {
-            int weight = 50*roc.getLocation().distanceSquaredTo(tower[i]) + roc.senseEnemyHQLocation().distanceSquaredTo(tower[i]);
-            if (weight < distanceSquared) {
-                closeTower = i;
-                distanceSquared = roc.getLocation().distanceSquaredTo(tower[i]);
+            for (int i = 0; i < size; i++) {
+                int weight = 2 * roc.getLocation().distanceSquaredTo(tower[i]) + roc.senseEnemyHQLocation().distanceSquaredTo(tower[i]);
+                if (weight < distanceSquared) {
+                    closeTower = i;
+                    distanceSquared = weight;
+                }
             }
-        }
 
-        return tower[closeTower];
+            return tower[closeTower];
+        } else {
+            return roc.senseHQLocation();
+        }
 
     }
 
